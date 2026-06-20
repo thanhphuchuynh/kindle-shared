@@ -4,12 +4,9 @@ import KindleShareCore
 struct ContentView: View {
     @StateObject private var viewModel = ShareViewModel()
 
-    private let columns = [
-        GridItem(.flexible(minimum: 260), spacing: 0),
-        GridItem(.fixed(86), spacing: 0),
-        GridItem(.fixed(86), spacing: 0),
-        GridItem(.fixed(92), spacing: 0)
-    ]
+    private let formatColumnWidth: CGFloat = 86
+    private let sizeColumnWidth: CGFloat = 92
+    private let statusColumnWidth: CGFloat = 102
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,8 +23,8 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(AppColor.hairline.opacity(0.85), lineWidth: 1)
         }
-        .shadow(color: .black.opacity(0.16), radius: 28, y: 18)
-        .padding(12)
+        .shadow(color: .black.opacity(0.14), radius: 24, y: 14)
+        .padding(10)
         .background(Color.black.opacity(0.04))
         .onDisappear {
             viewModel.stopSharing()
@@ -53,22 +50,22 @@ struct ContentView: View {
 
             Color.clear.frame(width: 88, height: 1)
         }
-        .padding(.horizontal, 20)
-        .frame(height: 52)
+        .padding(.horizontal, 18)
+        .frame(height: 44)
         .background(AppColor.titleBar)
     }
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 18) {
             brandBlock
             folderPanel
             quickStats
             wifiNote
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 26)
-        .frame(width: 278)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 22)
+        .frame(width: 260)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(AppColor.sidebar)
         .overlay(alignment: .trailing) {
@@ -88,11 +85,11 @@ struct ContentView: View {
                     .font(.system(size: 19, weight: .semibold))
                     .foregroundStyle(AppColor.inverseText)
             }
-            .frame(width: 42, height: 42)
+            .frame(width: 38, height: 38)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Kindle Share")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(AppColor.ink)
 
                 Text("Local Wi-Fi transfer")
@@ -103,7 +100,7 @@ struct ContentView: View {
     }
 
     private var folderPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Books folder")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(AppColor.muted)
@@ -114,7 +111,7 @@ struct ContentView: View {
                     .foregroundStyle(AppColor.accent)
 
                 Text(viewModel.folderName)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(viewModel.selectedFolder == nil ? AppColor.muted : AppColor.ink)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -125,13 +122,13 @@ struct ContentView: View {
             } label: {
                 Label("Choose Folder", systemImage: "folder.badge.plus")
                     .font(.system(size: 13, weight: .semibold))
-                    .frame(maxWidth: .infinity, minHeight: 36)
+                    .frame(maxWidth: .infinity, minHeight: 32)
             }
             .buttonStyle(.plain)
             .foregroundStyle(AppColor.inverseText)
             .background(AppColor.ink, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
-        .padding(14)
+        .padding(12)
         .background(AppColor.panel, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -140,7 +137,7 @@ struct ContentView: View {
     }
 
     private var quickStats: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             statRow("Books ready", value: "\(viewModel.books.count)")
             statRow("Server port", value: "8787")
             statRow("Formats", value: "PDF EPUB AZW")
@@ -148,31 +145,31 @@ struct ContentView: View {
     }
 
     private var wifiNote: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 7) {
             Text("Same Wi-Fi required")
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(AppColor.accent)
 
             Text("Open the browser on Kindle and enter the address shown on the right.")
-                .font(.system(size: 12))
+                .font(.system(size: 11))
                 .lineSpacing(2)
                 .foregroundStyle(AppColor.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(14)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColor.accentSoft, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private var mainWorkspace: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 18) {
             workspaceHeader
             urlPanel
             booksHeader
             booksTable
         }
-        .padding(.horizontal, 30)
-        .padding(.vertical, 28)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppColor.workspace)
     }
@@ -181,11 +178,11 @@ struct ContentView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(viewModel.isSharing ? "Ready to share" : "Ready when you are")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 25, weight: .bold))
                     .foregroundStyle(AppColor.ink)
 
                 Text(viewModel.statusSubtitle)
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                     .foregroundStyle(AppColor.muted)
             }
 
@@ -197,43 +194,45 @@ struct ContentView: View {
                     .frame(width: 8, height: 8)
 
                 Text(viewModel.isSharing ? "Sharing on" : "Stopped")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(viewModel.isSharing ? AppColor.accent : AppColor.muted)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
             .background(viewModel.isSharing ? AppColor.accentSoft : AppColor.panel, in: Capsule())
         }
     }
 
     private var urlPanel: some View {
-        HStack(alignment: .center, spacing: 24) {
-            VStack(alignment: .leading, spacing: 10) {
+        HStack(alignment: .center, spacing: 22) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("Type this on Kindle")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(AppColor.inverseMuted)
 
                 Text(viewModel.kindleURL)
-                    .font(.system(size: 26, weight: .bold, design: .monospaced))
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
                     .foregroundStyle(AppColor.inverseText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                     .textSelection(.enabled)
 
                 Text(urlHelpText)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                     .foregroundStyle(AppColor.inverseSecondary)
             }
 
             Spacer(minLength: 8)
 
-            VStack(spacing: 10) {
+            VStack(spacing: 9) {
                 Button {
                     viewModel.copyKindleURL()
                 } label: {
                     Label("Copy URL", systemImage: "doc.on.doc")
-                        .font(.system(size: 13, weight: .bold))
-                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .font(.system(size: 12, weight: .bold))
+                        .frame(maxWidth: .infinity, minHeight: 36)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(AppColor.inverse)
@@ -244,8 +243,8 @@ struct ContentView: View {
                     viewModel.toggleSharing()
                 } label: {
                     Label(viewModel.isSharing ? "Stop" : "Start", systemImage: viewModel.isSharing ? "stop.fill" : "play.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 38)
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(maxWidth: .infinity, minHeight: 34)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(AppColor.inverseText)
@@ -255,18 +254,18 @@ struct ContentView: View {
                         .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 }
             }
-            .frame(width: 150)
+            .frame(width: 136)
         }
-        .padding(.horizontal, 26)
-        .padding(.vertical, 24)
-        .frame(maxWidth: .infinity, minHeight: 150)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 20)
+        .frame(maxWidth: .infinity, minHeight: 128)
         .background(AppColor.inverse, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var booksHeader: some View {
         HStack {
             Text("Shared books")
-                .font(.system(size: 17, weight: .bold))
+                .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(AppColor.ink)
 
             Spacer()
@@ -275,9 +274,9 @@ struct ContentView: View {
                 viewModel.refreshBooks()
             } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .padding(.horizontal, 12)
-                    .frame(height: 34)
+                    .frame(height: 32)
             }
             .buttonStyle(.plain)
             .foregroundStyle(AppColor.ink)
@@ -292,14 +291,17 @@ struct ContentView: View {
 
     private var booksTable: some View {
         VStack(spacing: 0) {
-            LazyVGrid(columns: columns, spacing: 0) {
+            HStack(spacing: 0) {
                 tableHeader("Title")
                 tableHeader("Format")
+                    .frame(width: formatColumnWidth, alignment: .leading)
                 tableHeader("Size")
+                    .frame(width: sizeColumnWidth, alignment: .leading)
                 tableHeader("Status")
+                    .frame(width: statusColumnWidth, alignment: .leading)
             }
-            .padding(.horizontal, 16)
-            .frame(height: 42)
+            .padding(.horizontal, 14)
+            .frame(height: 38)
             .background(AppColor.tableHeader)
             .overlay(alignment: .bottom) {
                 Rectangle().fill(AppColor.hairline).frame(height: 1)
@@ -319,7 +321,7 @@ struct ContentView: View {
                 }
             }
         }
-        .frame(minHeight: 292)
+        .frame(minHeight: 268)
         .background(AppColor.panel, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay {
@@ -329,7 +331,7 @@ struct ContentView: View {
     }
 
     private func bookRow(_ book: BookFile) -> some View {
-        LazyVGrid(columns: columns, spacing: 0) {
+        HStack(spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: "doc.text")
                     .font(.system(size: 15, weight: .semibold))
@@ -337,28 +339,33 @@ struct ContentView: View {
                     .frame(width: 18)
 
                 Text(book.name)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AppColor.ink)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.trailing, 14)
 
             tableCell(book.fileExtension.uppercased(), monospaced: true)
+                .frame(width: formatColumnWidth, alignment: .leading)
             tableCell(book.displaySize, monospaced: true)
+                .frame(width: sizeColumnWidth, alignment: .leading)
 
             HStack {
                 Text("Ready")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppColor.accent)
-                    .padding(.horizontal, 12)
-                    .frame(height: 26)
+                    .padding(.horizontal, 11)
+                    .frame(height: 24)
                     .background(AppColor.accentSoft, in: Capsule())
 
                 Spacer(minLength: 0)
             }
+            .frame(width: statusColumnWidth, alignment: .leading)
         }
-        .padding(.horizontal, 16)
-        .frame(height: 54)
+        .padding(.horizontal, 14)
+        .frame(height: 48)
         .overlay(alignment: .bottom) {
             Rectangle().fill(AppColor.rowDivider).frame(height: 1)
         }
