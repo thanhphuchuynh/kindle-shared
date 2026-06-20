@@ -1,8 +1,12 @@
 # Kindle Share
 
-A small macOS SwiftUI utility for sharing one local books folder with a Kindle over the same Wi-Fi network.
+A small utility for sharing one local books folder with a Kindle over the same Wi-Fi network.
+
+The macOS app keeps the native Finder-like UI. The CLI exposes the same local server workflow for macOS, Linux, and Windows-oriented builds.
 
 ## Run
+
+### macOS App
 
 ```bash
 swift run KindleShare
@@ -18,6 +22,21 @@ Then:
 Supported formats: `.pdf`, `.epub`, `.mobi`, `.azw`, `.azw3`.
 
 The server only shares files from the selected folder and listens on port `8787`.
+
+### CLI Server
+
+```bash
+swift run kindle-share serve --folder ~/Books --port 8787
+```
+
+Or build the binary:
+
+```bash
+swift build -c release --product kindle-share
+.build/release/kindle-share serve --folder ~/Books --port 8787
+```
+
+More CLI notes are in [docs/cli.md](docs/cli.md).
 
 ## Build A Mac App Zip
 

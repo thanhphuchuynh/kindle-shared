@@ -1,7 +1,15 @@
 import Foundation
+#if os(Linux)
+import Glibc
+#elseif os(Windows)
+import WinSDK
+#endif
 
 public enum LocalIPAddressProvider {
     public static func localIPv4Address() -> String? {
+        #if os(Windows)
+        return nil
+        #else
         var address: String?
         var interfaces: UnsafeMutablePointer<ifaddrs>?
 
@@ -22,7 +30,7 @@ public enum LocalIPAddressProvider {
             var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
             let result = getnameinfo(
                 interface.ifa_addr,
-                socklen_t(interface.ifa_addr.pointee.sa_len),
+                socketAddressLength(for: interface.ifa_addr.pointee),
                 &hostname,
                 socklen_t(hostname.count),
                 nil,
@@ -38,5 +46,19 @@ public enum LocalIPAddressProvider {
         }
 
         return address
+        #endif
     }
+
+    #if !os(Windows)
+    private static func socketAddressLength(for address: sockaddr) -> socklen_t {
+        #if os(Linux)
+        if address.sa_family == sa_family_t(AF_INET) {
+            return socklen_t(MemoryLayout<sockaddr_in>.size)
+        }
+        return socklen_t(MemoryLayout<sockaddr>.size)
+        #else
+        return socklen_t(address.sa_len)
+        #endif
+    }
+    #endif
 }
