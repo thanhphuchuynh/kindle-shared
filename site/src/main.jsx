@@ -54,6 +54,14 @@ function makeTextSprite(text, options = {}) {
   return sprite;
 }
 
+function updateTextSprite(sprite, text, options = {}) {
+  const oldMap = sprite.material.map;
+  const next = makeTextSprite(text, options);
+  sprite.material.map = next.material.map;
+  sprite.material.needsUpdate = true;
+  if (oldMap) oldMap.dispose();
+}
+
 function createArc(radius, y, color) {
   const points = [];
   for (let i = 0; i <= 52; i += 1) {
@@ -65,7 +73,18 @@ function createArc(radius, y, color) {
   return new THREE.Line(geometry, material);
 }
 
-function Diorama() {
+function setObjectOpacity(object, opacity) {
+  object.traverse((child) => {
+    if (!child.material) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    materials.forEach((material) => {
+      material.transparent = opacity < 1;
+      material.opacity = opacity;
+    });
+  });
+}
+
+function Diorama({ activeStep }) {
   const mountRef = useRef(null);
 
   useEffect(() => {
@@ -74,10 +93,12 @@ function Diorama() {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#ede9dc");
+    const state = { activeStep: 0 };
+    mount.__kindleShareState = state;
 
     const camera = new THREE.PerspectiveCamera(34, mount.clientWidth / mount.clientHeight, 0.1, 100);
-    camera.position.set(-0.7, 3.6, 8.9);
-    camera.lookAt(0.72, 0.08, 0);
+    camera.position.set(-0.9, 3.75, 8.9);
+    camera.lookAt(0.64, 0.08, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -109,61 +130,138 @@ function Diorama() {
     desk.position.y = -0.62;
     scene.add(desk);
 
+    const laptopGroup = new THREE.Group();
+    laptopGroup.position.x = 2.05;
+    scene.add(laptopGroup);
+
     const laptopBase = new THREE.Mesh(roundedBoxGeometry(1.95, 0.16, 1.25, 0.08), graphite);
     laptopBase.position.set(-1.95, -0.32, 0.12);
     laptopBase.rotation.x = -Math.PI / 2;
-    scene.add(laptopBase);
+    laptopGroup.add(laptopBase);
 
     const laptopScreen = new THREE.Mesh(roundedBoxGeometry(1.85, 1.2, 0.12, 0.09), ink);
     laptopScreen.position.set(-1.95, 0.33, -0.48);
     laptopScreen.rotation.x = -0.25;
-    scene.add(laptopScreen);
+    laptopGroup.add(laptopScreen);
 
     const laptopPanel = new THREE.Mesh(roundedBoxGeometry(1.55, 0.84, 0.04, 0.05), screen);
     laptopPanel.position.set(-1.95, 0.37, -0.55);
     laptopPanel.rotation.x = -0.25;
-    scene.add(laptopPanel);
+    laptopGroup.add(laptopPanel);
+
+    const laptopAppOptions = {
+      width: 620,
+      height: 300,
+      size: 34,
+      lineHeight: 48,
+      weight: 800,
+      scaleX: 1.02,
+      scaleY: 0.48,
+      color: "#232520",
+      bg: "rgba(244,240,226,0.84)",
+    };
+    const laptopApp = makeTextSprite("Kindle Share\nClick Open app", laptopAppOptions);
+    laptopApp.position.set(-1.95, 0.62, 0.28);
+    laptopGroup.add(laptopApp);
 
     const folderLabel = makeTextSprite("~/Books", { size: 48, weight: 800, scaleX: 1.2, scaleY: 0.32, color: "#232520" });
-    folderLabel.position.set(-1.95, 0.5, -0.66);
-    scene.add(folderLabel);
+    folderLabel.position.set(-1.95, 0.5, 0.38);
+    folderLabel.visible = false;
+    laptopGroup.add(folderLabel);
 
+    const bookStack = new THREE.Group();
+    bookStack.position.x = 2.05;
+    scene.add(bookStack);
     for (let i = 0; i < 5; i += 1) {
       const book = new THREE.Mesh(roundedBoxGeometry(0.52, 0.12, 0.78, 0.03), bookMats[i % bookMats.length]);
       book.position.set(-2.55 + i * 0.16, -0.22 + i * 0.09, 1.15 - i * 0.02);
       book.rotation.set(-Math.PI / 2, 0.08, -0.12);
-      scene.add(book);
+      bookStack.add(book);
     }
 
-    const kindle = new THREE.Mesh(roundedBoxGeometry(1.25, 1.85, 0.14, 0.11), ink);
-    kindle.position.set(2.05, 0.25, 0.35);
-    kindle.rotation.set(-0.12, -0.28, 0.03);
-    scene.add(kindle);
-
-    const kindleScreen = new THREE.Mesh(roundedBoxGeometry(1.02, 1.52, 0.04, 0.06), paper);
-    kindleScreen.position.set(2.0, 0.3, 0.48);
-    kindleScreen.rotation.set(-0.12, -0.28, 0.03);
-    scene.add(kindleScreen);
-
-    const kindleList = makeTextSprite("Kindle Share\nBo Gia.azw3\nDesign.pdf\nReady", {
-      width: 520,
-      height: 300,
-      size: 35,
-      lineHeight: 50,
-      weight: 800,
-      scaleX: 0.86,
-      scaleY: 0.5,
+    const ebookCard = new THREE.Mesh(roundedBoxGeometry(0.64, 0.9, 0.035, 0.04), paper);
+    ebookCard.position.set(-1.32, -0.22, 1.05);
+    ebookCard.rotation.set(-Math.PI / 2, 0.1, 0.18);
+    bookStack.add(ebookCard);
+    const ebookLabel = makeTextSprite("EPUB\nAZW3\nPDF", {
+      width: 360,
+      height: 240,
+      size: 36,
+      lineHeight: 48,
+      weight: 900,
+      scaleX: 0.5,
+      scaleY: 0.32,
       color: "#232520",
     });
+    ebookLabel.position.set(-1.32, -0.08, 0.98);
+    bookStack.add(ebookLabel);
+
+    const kindleGroup = new THREE.Group();
+    kindleGroup.position.x = 2.55;
+    scene.add(kindleGroup);
+
+    const kindleInk = ink.clone();
+    const kindleGraphite = graphite.clone();
+    const kindlePaper = paper.clone();
+
+    const kindle = new THREE.Mesh(roundedBoxGeometry(1.34, 2.05, 0.18, 0.13), kindleInk);
+    kindle.position.set(2.05, 0.25, 0.35);
+    kindle.rotation.set(-0.12, -0.28, 0.03);
+    kindleGroup.add(kindle);
+
+    const kindleScreen = new THREE.Mesh(roundedBoxGeometry(1.02, 1.47, 0.04, 0.055), kindlePaper);
+    kindleScreen.position.set(2.0, 0.34, 0.51);
+    kindleScreen.rotation.set(-0.12, -0.28, 0.03);
+    kindleGroup.add(kindleScreen);
+
+    const kindleButton = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 0.025, 32), kindleGraphite);
+    kindleButton.position.set(2.03, -0.66, 0.54);
+    kindleButton.rotation.set(Math.PI / 2 - 0.12, 0, -0.28);
+    kindleGroup.add(kindleButton);
+
+    const leftPageButton = new THREE.Mesh(roundedBoxGeometry(0.035, 0.56, 0.035, 0.018), kindleGraphite.clone());
+    leftPageButton.position.set(1.36, 0.22, 0.57);
+    leftPageButton.rotation.set(-0.12, -0.28, 0.03);
+    kindleGroup.add(leftPageButton);
+
+    const rightPageButton = new THREE.Mesh(roundedBoxGeometry(0.035, 0.56, 0.035, 0.018), kindleGraphite.clone());
+    rightPageButton.position.set(2.72, 0.22, 0.22);
+    rightPageButton.rotation.set(-0.12, -0.28, 0.03);
+    kindleGroup.add(rightPageButton);
+
+    const kindleBrand = makeTextSprite("kindle", {
+      width: 420,
+      height: 90,
+      size: 34,
+      weight: 800,
+      scaleX: 0.46,
+      scaleY: 0.16,
+      color: "#f4f0e2",
+    });
+    kindleBrand.position.set(2.04, -0.53, 0.56);
+    kindleGroup.add(kindleBrand);
+
+    const kindleListOptions = {
+      width: 520,
+      height: 300,
+      size: 32,
+      lineHeight: 52,
+      weight: 800,
+      scaleX: 0.92,
+      scaleY: 0.54,
+      color: "#232520",
+      bg: "#f4f0e2",
+    };
+    const kindleList = makeTextSprite("Kindle\nBrowser closed", kindleListOptions);
     kindleList.position.set(2.0, 0.38, 0.57);
-    scene.add(kindleList);
+    kindleGroup.add(kindleList);
 
     const router = new THREE.Mesh(roundedBoxGeometry(0.74, 0.18, 0.55, 0.07), blue);
-    router.position.set(0, -0.26, 1.04);
+    router.position.set(2.05, -0.26, 1.04);
     router.rotation.x = -Math.PI / 2;
     scene.add(router);
 
-    const urlLabel = makeTextSprite("192.168.1.7:8787", {
+    const urlLabelOptions = {
       width: 760,
       height: 110,
       size: 45,
@@ -172,13 +270,14 @@ function Diorama() {
       scaleX: 1.8,
       scaleY: 0.32,
       color: "#1f211f",
-    });
-    urlLabel.position.set(0, 1.45, -0.1);
+    };
+    const urlLabel = makeTextSprite("Laptop + ebooks", urlLabelOptions);
+    urlLabel.position.set(2.05, 1.45, -0.1);
     scene.add(urlLabel);
 
     const arcs = [0.9, 1.25, 1.62].map((radius, index) => {
       const arc = createArc(radius, 0.15 + index * 0.1, index === 1 ? "#2b6f8f" : "#242521");
-      arc.position.set(0.08, 0.3, 0.22);
+      arc.position.set(2.13, 0.3, 0.22);
       arc.rotation.x = -0.18;
       scene.add(arc);
       return arc;
@@ -192,6 +291,69 @@ function Diorama() {
       scene.add(p);
       particles.push(p);
     }
+
+    const laptopScreens = [
+      "Kindle Share\nLaptop + ebooks\nReady",
+      "Kindle Share\nOpen app\nLocal transfer",
+      "Books folder\n~/Books selected\n18 books",
+      "Sharing on\nhttp://192.168.1.7:8787\nCopy URL",
+      "Copy this URL\n192.168.1.7:8787\nOpen on Kindle",
+      "Server running\nKindle connected\nDownloading...",
+      "Transfer done\nBo Gia.azw3\nReady",
+    ];
+
+    const stepScreens = [
+      "kindle\nsleeping",
+      "Browser\nclosed",
+      "Waiting\nfor URL",
+      "Waiting\nfor URL",
+      "192.168.1.7\n8787\nOpen",
+      "Bo Gia.azw3\nTap download",
+      "READING\nBo Gia.azw3\nChapter 1",
+    ];
+
+    const stepUrls = [
+      "Laptop + ebooks",
+      "Open Kindle Share",
+      "Choose ~/Books",
+      "Start local server",
+      "192.168.1.7:8787",
+      "Downloading to Kindle",
+      "Open book on Kindle",
+    ];
+
+    const cameraTargets = [
+      { position: new THREE.Vector3(0.55, 3.35, 7.2), lookAt: new THREE.Vector3(0.62, 0.0, 0.3) },
+      { position: new THREE.Vector3(0.0, 2.2, 4.6), lookAt: new THREE.Vector3(0.12, 0.34, -0.55) },
+      { position: new THREE.Vector3(-0.02, 2.08, 4.25), lookAt: new THREE.Vector3(0.1, 0.38, -0.6) },
+      { position: new THREE.Vector3(0.45, 2.28, 4.95), lookAt: new THREE.Vector3(0.48, 0.42, -0.35) },
+      { position: new THREE.Vector3(1.8, 3.0, 6.7), lookAt: new THREE.Vector3(3.1, 0.34, 0.16) },
+      { position: new THREE.Vector3(3.22, 2.55, 5.25), lookAt: new THREE.Vector3(4.55, 0.35, 0.46) },
+      { position: new THREE.Vector3(3.55, 2.16, 4.35), lookAt: new THREE.Vector3(4.55, 0.34, 0.52) },
+    ];
+
+    const applyStep = (nextStep) => {
+      state.activeStep = nextStep;
+      updateTextSprite(laptopApp, laptopScreens[nextStep], laptopAppOptions);
+      updateTextSprite(kindleList, stepScreens[nextStep], kindleListOptions);
+      updateTextSprite(urlLabel, stepUrls[nextStep], urlLabelOptions);
+      folderLabel.visible = nextStep >= 2;
+      router.visible = nextStep >= 3;
+      arcs.forEach((arc) => {
+        arc.visible = nextStep >= 4;
+      });
+      particles.forEach((particle, index) => {
+        particle.visible = nextStep >= 4 || (nextStep === 0 && index % 5 === 0);
+      });
+      setObjectOpacity(kindleGroup, nextStep >= 4 ? 1 : 0.18);
+      setObjectOpacity(bookStack, nextStep <= 3 ? 1 : 0.38);
+    };
+
+    applyStep(state.activeStep);
+
+    const handleStepChange = (event) => {
+      applyStep(event.detail);
+    };
 
     let frameId = 0;
     const clock = new THREE.Clock();
@@ -207,9 +369,16 @@ function Diorama() {
     const animate = () => {
       const elapsed = clock.getElapsedTime();
       const scroll = Math.min(window.scrollY / Math.max(window.innerHeight, 1), 1);
-      camera.position.x = THREE.MathUtils.lerp(camera.position.x, -0.7 + scroll * 0.7, 0.03);
-      camera.position.y = THREE.MathUtils.lerp(camera.position.y, 3.75 - scroll * 0.55, 0.03);
-      camera.lookAt(0.72 + scroll * 0.18, 0.12, 0);
+      const target = cameraTargets[state.activeStep] || cameraTargets[0];
+      camera.position.lerp(target.position, 0.035);
+      const lookAt = target.lookAt.clone();
+      lookAt.x += scroll * 0.08;
+      lookAt.y -= scroll * 0.05;
+      camera.lookAt(lookAt);
+
+      laptopScreen.rotation.x = THREE.MathUtils.lerp(laptopScreen.rotation.x, state.activeStep === 0 ? -0.62 : -0.25, 0.045);
+      laptopPanel.rotation.x = laptopScreen.rotation.x;
+      laptopApp.position.y = THREE.MathUtils.lerp(laptopApp.position.y, state.activeStep === 0 ? 0.42 : 0.62, 0.06);
 
       arcs.forEach((arc, index) => {
         arc.material.opacity = 0.35 + Math.sin(elapsed * 2.4 + index) * 0.18 + 0.35;
@@ -218,26 +387,31 @@ function Diorama() {
       particles.forEach((particle) => {
         const t = (elapsed * 0.18 + particle.userData.offset) % 1;
         const eased = 0.5 - Math.cos(t * Math.PI) / 2;
+        const heightBoost = state.activeStep >= 5 ? 1.55 : 1.25;
         particle.position.set(
-          THREE.MathUtils.lerp(-1.52, 1.58, eased),
-          0.02 + Math.sin(t * Math.PI) * 1.25,
+          THREE.MathUtils.lerp(0.5, 4.02, eased),
+          0.02 + Math.sin(t * Math.PI) * heightBoost,
           0.45 + Math.sin(t * Math.PI * 2) * 0.18
         );
         particle.scale.setScalar(0.7 + Math.sin(t * Math.PI) * 0.8);
       });
 
       router.rotation.z = Math.sin(elapsed * 0.7) * 0.025;
+      kindleGroup.position.y = Math.sin(elapsed * 0.8) * 0.015;
       frameId = requestAnimationFrame(animate);
       renderer.render(scene, camera);
     };
 
     window.addEventListener("resize", resize);
+    mount.addEventListener("kindle-share-step", handleStepChange);
     resize();
     animate();
 
     return () => {
       cancelAnimationFrame(frameId);
       window.removeEventListener("resize", resize);
+      mount.removeEventListener("kindle-share-step", handleStepChange);
+      delete mount.__kindleShareState;
       mount.removeChild(renderer.domElement);
       scene.traverse((object) => {
         if (object.geometry) object.geometry.dispose();
@@ -250,22 +424,27 @@ function Diorama() {
     };
   }, []);
 
+  useEffect(() => {
+    if (mountRef.current?.__kindleShareState) {
+      mountRef.current.__kindleShareState.activeStep = activeStep;
+      mountRef.current.dispatchEvent(new CustomEvent("kindle-share-step", { detail: activeStep }));
+    }
+  }, [activeStep]);
+
   return <div className="diorama" ref={mountRef} aria-hidden="true" />;
 }
 
 function App() {
   const [step, setStep] = useState(0);
   const steps = [
-    ["Choose a folder", "Point Kindle Share at the books already on your computer."],
-    ["Start local sharing", "A tiny server opens inside your home Wi-Fi network."],
-    ["Open the Kindle URL", "Type the local address into the Kindle browser."],
-    ["Download", "Tap a title and let Kindle pull the file directly."],
+    ["Laptop + ebooks", "Start with the computer and the book files already beside you."],
+    ["Open app", "Kindle Share opens on the laptop and waits for a folder."],
+    ["Choose folder", "Select the folder that contains EPUB, PDF, MOBI, AZW, or AZW3 files."],
+    ["Start server", "The app starts a small local server and shows a private Wi-Fi URL."],
+    ["Open URL", "Type the local address into the Kindle browser."],
+    ["Download book", "Tap a title and let Kindle pull the file directly."],
+    ["Read on Kindle", "Open the downloaded book and keep reading."],
   ];
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setStep((current) => (current + 1) % steps.length), 2600);
-    return () => window.clearInterval(timer);
-  }, [steps.length]);
 
   return (
     <>
@@ -283,7 +462,7 @@ function App() {
 
       <main id="top">
         <section className="hero" aria-label="Kindle Share overview">
-          <Diorama />
+          <Diorama activeStep={step} />
           <div className="hero-copy">
             <h1>A local book server for Kindle.</h1>
             <p>Your books are already in the room. Share a folder from your computer, open one local address on Kindle, and download. No cloud. No account. No cable.</p>
@@ -297,12 +476,20 @@ function App() {
             <strong>local Wi-Fi</strong>
             <span>Kindle Browser</span>
           </div>
+          <div className="hero-demo" aria-label="Interactive transfer demo">
+            {steps.map(([title], index) => (
+              <button className={step === index ? "active" : ""} key={title} onClick={() => setStep(index)}>
+                <span>0{index + 1}</span>
+                {title}
+              </button>
+            ))}
+          </div>
         </section>
 
         <section id="how" className="story">
           <div className="section-copy">
             <h2>Four small steps. One room.</h2>
-            <p>Kindle Share feels like a quiet e-ink manual because the workflow is that simple: folder, address, browser, download.</p>
+            <p>Kindle Share feels like a quiet e-ink manual because the workflow is visible: laptop, app, folder, URL, Kindle browser, download, read.</p>
           </div>
           <div className="step-list">
             {steps.map(([title, body], index) => (

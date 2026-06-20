@@ -104,7 +104,7 @@ nav a {
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(238, 233, 219, 0.97) 0%, rgba(238, 233, 219, 0.9) 34%, rgba(238, 233, 219, 0.22) 58%, rgba(238, 233, 219, 0.04) 100%),
+    linear-gradient(90deg, rgba(238, 233, 219, 0.98) 0%, rgba(238, 233, 219, 0.94) 34%, rgba(238, 233, 219, 0.12) 49%, rgba(238, 233, 219, 0.02) 100%),
     linear-gradient(180deg, rgba(238, 233, 219, 0.08), rgba(238, 233, 219, 0.26));
 }
 
@@ -186,6 +186,51 @@ h1 {
 
 .hero-note strong {
   color: var(--blue);
+}
+
+.hero-demo {
+  position: absolute;
+  z-index: 2;
+  right: 48px;
+  top: 118px;
+  display: grid;
+  gap: 8px;
+  width: 310px;
+  padding: 8px;
+  border: 1px solid rgba(32, 33, 30, 0.22);
+  border-radius: 8px;
+  background: rgba(251, 248, 239, 0.62);
+  backdrop-filter: blur(10px);
+}
+
+.hero-demo button {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  min-height: 38px;
+  padding: 7px 10px;
+  color: var(--ink);
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.hero-demo span {
+  color: var(--blue);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.hero-demo button.active {
+  border-color: var(--line);
+  background: var(--white);
+  box-shadow: 0 10px 24px rgba(30, 29, 24, 0.12);
 }
 
 .story,
@@ -380,9 +425,24 @@ footer {
   .hero-note {
     left: 20px;
     right: 20px;
-    bottom: 24px;
+    bottom: 112px;
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .hero-demo {
+    left: 20px;
+    right: 20px;
+    top: auto;
+    bottom: 20px;
+    width: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .hero-demo button {
+    min-height: 46px;
+    grid-template-columns: 28px 1fr;
+    font-size: 12px;
   }
 
   .story,
