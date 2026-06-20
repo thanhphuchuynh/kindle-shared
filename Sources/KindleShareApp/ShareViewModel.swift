@@ -4,10 +4,18 @@ import KindleShareCore
 
 @MainActor
 final class ShareViewModel: ObservableObject {
+    enum Action: Equatable {
+        case chooseFolder
+        case copyURL
+        case refresh
+        case sharing
+    }
+
     @Published private(set) var selectedFolder: URL?
     @Published private(set) var books: [BookFile] = []
     @Published private(set) var isSharing = false
     @Published private(set) var localAddress = LocalIPAddressProvider.localIPv4Address()
+    @Published private(set) var activeAction: Action?
     @Published var errorMessage: String?
 
     private let scanner = BookScanner()
@@ -38,6 +46,9 @@ final class ShareViewModel: ObservableObject {
     }
 
     func chooseFolder() {
+        activeAction = .chooseFolder
+        defer { activeAction = nil }
+
         let panel = NSOpenPanel()
         panel.title = "Choose Books Folder"
         panel.prompt = "Choose"
@@ -71,8 +82,16 @@ final class ShareViewModel: ObservableObject {
         }
     }
 
+    func refreshBooksWithFeedback() {
+        runActionFeedback(.refresh) { [weak self] in
+            self?.refreshBooks()
+        }
+    }
+
     func toggleSharing() {
-        isSharing ? stopSharing() : startSharing()
+        runActionFeedback(.sharing) { [weak self] in
+            self?.isSharing == true ? self?.stopSharing() : self?.startSharing()
+        }
     }
 
     func startSharing() {
@@ -99,8 +118,28 @@ final class ShareViewModel: ObservableObject {
     }
 
     func copyKindleURL() {
-        guard localAddress != nil else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(kindleURL, forType: .string)
+        runActionFeedback(.copyURL) { [weak self] in
+            guard let self, self.localAddress != nil else { return }
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(self.kindleURL, forType: .string)
+        }
+    }
+
+    func isLoading(_ action: Action) -> Bool {
+        activeAction == action
+    }
+
+    private func runActionFeedback(_ action: Action, operation: @escaping @MainActor () -> Void) {
+        guard activeAction == nil else { return }
+
+        activeAction = action
+        operation()
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(280))
+            if activeAction == action {
+                activeAction = nil
+            }
+        }
     }
 }

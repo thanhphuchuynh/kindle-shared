@@ -120,11 +120,15 @@ struct ContentView: View {
             Button {
                 viewModel.chooseFolder()
             } label: {
-                Label("Choose Folder", systemImage: "folder.badge.plus")
-                    .font(.system(size: 13, weight: .semibold))
-                    .frame(maxWidth: .infinity, minHeight: 32)
+                LoadingButtonLabel(
+                    title: "Choose Folder",
+                    systemImage: "folder.badge.plus",
+                    isLoading: viewModel.isLoading(.chooseFolder)
+                )
+                .font(.system(size: 13, weight: .semibold))
+                .frame(maxWidth: .infinity, minHeight: 32)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressableButtonStyle())
             .foregroundStyle(AppColor.inverseText)
             .background(AppColor.ink, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
@@ -230,11 +234,15 @@ struct ContentView: View {
                 Button {
                     viewModel.copyKindleURL()
                 } label: {
-                    Label("Copy URL", systemImage: "doc.on.doc")
-                        .font(.system(size: 12, weight: .bold))
-                        .frame(maxWidth: .infinity, minHeight: 36)
+                    LoadingButtonLabel(
+                        title: "Copy URL",
+                        systemImage: "doc.on.doc",
+                        isLoading: viewModel.isLoading(.copyURL)
+                    )
+                    .font(.system(size: 12, weight: .bold))
+                    .frame(maxWidth: .infinity, minHeight: 36)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableButtonStyle())
                 .foregroundStyle(AppColor.inverse)
                 .background(AppColor.inverseText, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                 .disabled(viewModel.localAddress == nil)
@@ -242,11 +250,15 @@ struct ContentView: View {
                 Button {
                     viewModel.toggleSharing()
                 } label: {
-                    Label(viewModel.isSharing ? "Stop" : "Start", systemImage: viewModel.isSharing ? "stop.fill" : "play.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 34)
+                    LoadingButtonLabel(
+                        title: viewModel.isSharing ? "Stop" : "Start",
+                        systemImage: viewModel.isSharing ? "stop.fill" : "play.fill",
+                        isLoading: viewModel.isLoading(.sharing)
+                    )
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(maxWidth: .infinity, minHeight: 34)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableButtonStyle())
                 .foregroundStyle(AppColor.inverseText)
                 .background(AppColor.inverseButton, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                 .overlay {
@@ -271,14 +283,18 @@ struct ContentView: View {
             Spacer()
 
             Button {
-                viewModel.refreshBooks()
+                viewModel.refreshBooksWithFeedback()
             } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
-                    .font(.system(size: 12, weight: .semibold))
-                    .padding(.horizontal, 12)
-                    .frame(height: 32)
+                LoadingButtonLabel(
+                    title: "Refresh",
+                    systemImage: "arrow.clockwise",
+                    isLoading: viewModel.isLoading(.refresh)
+                )
+                .font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 12)
+                .frame(height: 32)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressableButtonStyle())
             .foregroundStyle(AppColor.ink)
             .background(AppColor.panel, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
             .overlay {
@@ -440,6 +456,62 @@ private enum TrafficLightColor {
         case .yellow: Color(red: 1.0, green: 0.74, blue: 0.18)
         case .green: Color(red: 0.16, green: 0.78, blue: 0.25)
         }
+    }
+}
+
+private struct LoadingButtonLabel: View {
+    let title: String
+    let systemImage: String
+    let isLoading: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if isLoading {
+                if title == "Copy URL" {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .frame(width: 16, height: 16)
+                } else {
+                    ProgressView()
+                        .controlSize(.small)
+                        .scaleEffect(0.72)
+                        .frame(width: 16, height: 16)
+                }
+            } else {
+                Image(systemName: systemImage)
+                    .font(.system(size: 14, weight: .semibold))
+                    .frame(width: 16, height: 16)
+            }
+
+            Text(isLoading ? loadingTitle : title)
+                .lineLimit(1)
+        }
+        .contentTransition(.opacity)
+        .animation(.easeOut(duration: 0.16), value: isLoading)
+    }
+
+    private var loadingTitle: String {
+        switch title {
+        case "Copy URL":
+            "Copied"
+        case "Refresh":
+            "Refreshing"
+        case "Start":
+            "Starting"
+        case "Stop":
+            "Stopping"
+        default:
+            "Opening"
+        }
+    }
+}
+
+private struct PressableButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.82 : 1)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
