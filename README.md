@@ -18,3 +18,17 @@ Then:
 Supported formats: `.pdf`, `.epub`, `.mobi`, `.azw`, `.azw3`.
 
 The server only shares files from the selected folder and listens on port `8787`.
+
+## Build A Mac App Zip
+
+```bash
+./scripts/package-macos.sh
+```
+
+This creates:
+
+```text
+dist/KindleShare.zip
+```
+
+Install notes for another Mac are in [docs/install-macos.md](docs/install-macos.md).
