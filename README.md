@@ -32,3 +32,14 @@ dist/KindleShare.zip
 ```
 
 Install notes for another Mac are in [docs/install-macos.md](docs/install-macos.md).
+
+## Release From A Git Tag
+
+Pushing a tag that starts with `v` runs GitHub Actions and publishes `KindleShare.zip` to a GitHub Release:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow is in [.github/workflows/release.yml](.github/workflows/release.yml).
