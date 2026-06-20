@@ -33,12 +33,7 @@ struct ContentView: View {
 
     private var titleBar: some View {
         HStack {
-            HStack(spacing: 8) {
-                trafficLight(.red)
-                trafficLight(.yellow)
-                trafficLight(.green)
-            }
-            .frame(width: 88, alignment: .leading)
+            Color.clear.frame(width: 112, height: 1)
 
             Spacer()
 
@@ -48,7 +43,7 @@ struct ContentView: View {
 
             Spacer()
 
-            Color.clear.frame(width: 88, height: 1)
+            Color.clear.frame(width: 112, height: 1)
         }
         .padding(.horizontal, 18)
         .frame(height: 44)
@@ -417,12 +412,6 @@ struct ContentView: View {
         }
     }
 
-    private func trafficLight(_ color: TrafficLightColor) -> some View {
-        Circle()
-            .fill(color.fill)
-            .frame(width: 12, height: 12)
-    }
-
     private func emptyState(_ text: String, systemImage: String) -> some View {
         VStack(spacing: 10) {
             Image(systemName: systemImage)
@@ -442,20 +431,6 @@ struct ContentView: View {
         }
 
         return "This address only works inside your home Wi-Fi network."
-    }
-}
-
-private enum TrafficLightColor {
-    case red
-    case yellow
-    case green
-
-    var fill: Color {
-        switch self {
-        case .red: Color(red: 1.0, green: 0.37, blue: 0.34)
-        case .yellow: Color(red: 1.0, green: 0.74, blue: 0.18)
-        case .green: Color(red: 0.16, green: 0.78, blue: 0.25)
-        }
     }
 }
 
