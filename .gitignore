@@ -3,3 +3,10 @@
 DerivedData/
 dist/
 node_modules/
+
+# Local design/planning scratch files
+docs/superpowers/
+design.pen
+design-exports/
+dither-image.glsl
+Assets/KindleShareLogo.png
