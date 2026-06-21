@@ -5,8 +5,8 @@ struct KindleShareApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .frame(minWidth: 760, minHeight: 560)
+                .frame(minWidth: 860, minHeight: 560)
         }
-        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified)
     }
 }

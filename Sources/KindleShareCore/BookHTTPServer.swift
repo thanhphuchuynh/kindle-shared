@@ -1,5 +1,6 @@
 import Foundation
-import Network
+import NIO
+import NIOHTTP1
 
 public final class BookHTTPServer: @unchecked Sendable {
     public enum ServerError: LocalizedError {
@@ -19,131 +20,150 @@ public final class BookHTTPServer: @unchecked Sendable {
     public private(set) var isRunning = false
 
     private let port: UInt16
+    private let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    private var channel: Channel?
     private var books: [BookFile] = []
-    private var listener: NWListener?
-    private let queue = DispatchQueue(label: "kindle-share.http-server")
 
     public init(port: UInt16 = 8787) {
         self.port = port
+    }
+
+    deinit {
+        stop()
+        try? group.syncShutdownGracefully()
     }
 
     public func start(books: [BookFile]) throws {
         stop()
         self.books = books
 
-        guard let nwPort = NWEndpoint.Port(rawValue: port) else {
+        guard port > 0 else {
             throw ServerError.invalidPort
         }
 
-        let listener: NWListener
+        let bootstrap = ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.backlog, value: 256)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .childChannelInitializer { [books] channel in
+                channel.pipeline.configureHTTPServerPipeline().flatMap {
+                    channel.pipeline.addHandler(BookHTTPHandler(books: books))
+                }
+            }
+            .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+
         do {
-            listener = try NWListener(using: .tcp, on: nwPort)
+            channel = try bootstrap.bind(host: "0.0.0.0", port: Int(port)).wait()
+            isRunning = true
         } catch {
+            isRunning = false
             throw ServerError.listenerFailed("Could not start sharing on port \(port). \(error.localizedDescription)")
         }
-
-        listener.newConnectionHandler = { [weak self] connection in
-            self?.handle(connection: connection)
-        }
-
-        listener.stateUpdateHandler = { [weak self] state in
-            switch state {
-            case .ready:
-                self?.isRunning = true
-            case .failed, .cancelled:
-                self?.isRunning = false
-            default:
-                break
-            }
-        }
-
-        self.listener = listener
-        listener.start(queue: queue)
     }
 
     public func stop() {
-        listener?.cancel()
-        listener = nil
+        if let channel {
+            try? channel.close().wait()
+        }
+        channel = nil
         isRunning = false
     }
+}
 
-    private func handle(connection: NWConnection) {
-        connection.start(queue: queue)
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 8_192) { [weak self] data, _, _, _ in
-            guard let self else {
-                connection.cancel()
-                return
-            }
+private final class BookHTTPHandler: ChannelInboundHandler, @unchecked Sendable {
+    typealias InboundIn = HTTPServerRequestPart
+    typealias OutboundOut = HTTPServerResponsePart
 
-            let response = self.response(for: data ?? Data())
-            connection.send(content: response, completion: .contentProcessed { _ in
-                connection.cancel()
-            })
+    private let books: [BookFile]
+    private var requestHead: HTTPRequestHead?
+
+    init(books: [BookFile]) {
+        self.books = books
+    }
+
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        switch unwrapInboundIn(data) {
+        case .head(let head):
+            requestHead = head
+        case .body:
+            break
+        case .end:
+            respond(context: context)
         }
     }
 
-    private func response(for data: Data) -> Data {
-        guard
-            let request = String(data: data, encoding: .utf8),
-            let requestLine = request.components(separatedBy: "\r\n").first
-        else {
-            return httpResponse(status: "400 Bad Request", body: "Bad Request")
+    private func respond(context: ChannelHandlerContext) {
+        guard let requestHead else {
+            sendTextResponse(context: context, status: .badRequest, body: "Bad Request")
+            return
         }
 
-        let parts = requestLine.split(separator: " ", maxSplits: 2).map(String.init)
-        guard parts.count >= 2 else {
-            return httpResponse(status: "400 Bad Request", body: "Bad Request")
+        guard requestHead.method == .GET else {
+            sendTextResponse(context: context, status: .methodNotAllowed, body: "Only GET is supported")
+            return
         }
 
-        guard parts[0] == "GET" else {
-            return httpResponse(status: "405 Method Not Allowed", body: "Only GET is supported")
-        }
-
-        if parts[1] == "/" {
-            return httpResponse(
-                status: "200 OK",
+        if requestHead.uri == "/" {
+            sendTextResponse(
+                context: context,
+                status: .ok,
                 contentType: "text/html; charset=utf-8",
                 body: HTMLRenderer.renderIndex(books: books)
             )
+            return
         }
 
-        if let book = DownloadResolver(books: books).resolve(path: parts[1]) {
-            return fileResponse(book: book)
+        if let book = DownloadResolver(books: books).resolve(path: requestHead.uri) {
+            sendFileResponse(context: context, book: book)
+            return
         }
 
-        return httpResponse(status: "404 Not Found", body: "Not Found")
+        sendTextResponse(context: context, status: .notFound, body: "Not Found")
     }
 
-    private func fileResponse(book: BookFile) -> Data {
+    private func sendFileResponse(context: ChannelHandlerContext, book: BookFile) {
         guard let body = try? Data(contentsOf: book.url) else {
-            return httpResponse(status: "404 Not Found", body: "File Not Found")
+            sendTextResponse(context: context, status: .notFound, body: "File Not Found")
+            return
         }
 
-        var header = ""
-        header += "HTTP/1.1 200 OK\r\n"
-        header += "Content-Type: \(mimeType(for: book.fileExtension))\r\n"
-        header += "Content-Length: \(body.count)\r\n"
-        header += "Content-Disposition: attachment; filename=\"\(book.name.headerEscaped)\"\r\n"
-        header += "Connection: close\r\n"
-        header += "\r\n"
+        var headers = HTTPHeaders()
+        headers.add(name: "Content-Type", value: mimeType(for: book.fileExtension))
+        headers.add(name: "Content-Length", value: "\(body.count)")
+        headers.add(name: "Content-Disposition", value: "attachment; filename=\"\(book.name.headerEscaped)\"")
+        headers.add(name: "Connection", value: "close")
 
-        var response = Data(header.utf8)
-        response.append(body)
-        return response
+        sendResponse(context: context, status: .ok, headers: headers, body: body)
     }
 
-    private func httpResponse(status: String, contentType: String = "text/plain; charset=utf-8", body: String) -> Data {
+    private func sendTextResponse(
+        context: ChannelHandlerContext,
+        status: HTTPResponseStatus,
+        contentType: String = "text/plain; charset=utf-8",
+        body: String
+    ) {
         let bodyData = Data(body.utf8)
-        var response = ""
-        response += "HTTP/1.1 \(status)\r\n"
-        response += "Content-Type: \(contentType)\r\n"
-        response += "Content-Length: \(bodyData.count)\r\n"
-        response += "Connection: close\r\n"
-        response += "\r\n"
+        var headers = HTTPHeaders()
+        headers.add(name: "Content-Type", value: contentType)
+        headers.add(name: "Content-Length", value: "\(bodyData.count)")
+        headers.add(name: "Connection", value: "close")
 
-        var data = Data(response.utf8)
-        data.append(bodyData)
-        return data
+        sendResponse(context: context, status: status, headers: headers, body: bodyData)
+    }
+
+    private func sendResponse(
+        context: ChannelHandlerContext,
+        status: HTTPResponseStatus,
+        headers: HTTPHeaders,
+        body: Data
+    ) {
+        context.write(wrapOutboundOut(.head(HTTPResponseHead(version: .http1_1, status: status, headers: headers))), promise: nil)
+
+        var buffer = context.channel.allocator.buffer(capacity: body.count)
+        buffer.writeBytes(body)
+        context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+
+        context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: nil)
+        context.close(promise: nil)
     }
 
     private func mimeType(for fileExtension: String) -> String {
