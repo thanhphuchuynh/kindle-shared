@@ -4,6 +4,8 @@ A small utility for sharing one local books folder with a Kindle over the same W
 
 The macOS app keeps the native Finder-like UI. The CLI exposes the same local server workflow for macOS, Linux, and Windows-oriented builds.
 
+Landing page: https://thanhphuchuynh.github.io/kindle-shared/
+
 ## Run
 
 ### macOS App
