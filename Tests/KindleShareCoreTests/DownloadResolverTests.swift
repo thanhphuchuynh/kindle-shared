@@ -4,8 +4,8 @@ import Testing
 
 @Suite("DownloadResolver")
 struct DownloadResolverTests {
-    @Test("resolves encoded file names to known books")
-    func resolvesEncodedFileNamesToKnownBooks() throws {
+    @Test("resolves encoded source file names to known books")
+    func resolvesEncodedSourceFileNamesToKnownBooks() throws {
         let book = BookFile(
             name: "A Book.epub",
             fileExtension: "epub",
@@ -14,6 +14,22 @@ struct DownloadResolverTests {
         )
 
         let resolved = try #require(DownloadResolver(books: [book]).resolve(path: "/download/A%20Book.epub"))
+
+        #expect(resolved == book)
+    }
+
+    @Test("resolves converted AZW3 names to source EPUB books")
+    func resolvesConvertedAZW3NamesToSourceEPUBBooks() throws {
+        let book = BookFile(
+            name: "A Book.epub",
+            fileExtension: "epub",
+            sizeInBytes: 10,
+            url: URL(filePath: "/tmp/A Book.epub")
+        )
+
+        let resolved = try #require(
+            DownloadResolver(books: [book]).resolve(path: "/download/KindleShare%20-%20A%20Book.azw3")
+        )
 
         #expect(resolved == book)
     }

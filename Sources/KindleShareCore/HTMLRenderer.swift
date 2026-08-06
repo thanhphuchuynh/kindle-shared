@@ -3,13 +3,17 @@ import Foundation
 public enum HTMLRenderer {
     public static func renderIndex(books: [BookFile]) -> String {
         let rows = books.map { book in
-            let formatLabel = book.fileExtension.lowercased() == "epub"
+            let isEPUB = book.fileExtension.lowercased() == "epub"
+            let downloadName = isEPUB
+                ? ConvertedBookNaming.azw3FileName(for: book.url)
+                : book.name
+            let formatLabel = isEPUB
                 ? "EPUB -> AZW3 on download"
                 : book.fileExtension.uppercased()
 
             return """
             <li>
-              <a href="/download/\(book.name.urlPathEncoded)">\(book.name.htmlEscaped)</a>
+              <a href="/download/\(downloadName.urlPathEncoded)">\(downloadName.htmlEscaped)</a>
               <span>\(formatLabel.htmlEscaped) · \(book.displaySize.htmlEscaped)</span>
             </li>
             """
