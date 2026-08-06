@@ -3,23 +3,42 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
+BUILD_PATH="${KINDLE_SHARE_BUILD_PATH:-/tmp/kindle-share-package-build}"
 APP_DIR="$DIST_DIR/KindleShare.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
+CONVERTER_DIR="$RESOURCES_DIR/Converter"
+CALIBRE_BUNDLE_DIR="$RESOURCES_DIR/Calibre"
 ICON_SOURCE="$ROOT_DIR/Assets/KindleShareLogo-BookWifi.png"
 ICONSET_DIR="$DIST_DIR/KindleShare.iconset"
 ICON_FILE="$RESOURCES_DIR/KindleShare.icns"
+CALIBRE_APP_SOURCE="${KINDLE_SHARE_CALIBRE_APP:-/Applications/calibre.app}"
+CALIBRE_CONVERTER_SOURCE="${KINDLE_SHARE_EBOOK_CONVERT:-/Applications/calibre.app/Contents/MacOS/ebook-convert}"
 
 cd "$ROOT_DIR"
 
-swift build -c release
+swift build -c release --build-path "$BUILD_PATH"
 
 rm -rf "$APP_DIR" "$DIST_DIR/KindleShare.zip" "$ICONSET_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
-cp "$ROOT_DIR/.build/release/KindleShare" "$MACOS_DIR/KindleShare"
+cp "$BUILD_PATH/release/KindleShare" "$MACOS_DIR/KindleShare"
 chmod +x "$MACOS_DIR/KindleShare"
+
+if [ -d "$CALIBRE_APP_SOURCE" ] && [ -x "$CALIBRE_APP_SOURCE/Contents/MacOS/ebook-convert" ]; then
+  mkdir -p "$CALIBRE_BUNDLE_DIR"
+  cp -R "$CALIBRE_APP_SOURCE" "$CALIBRE_BUNDLE_DIR/calibre.app"
+  xattr -cr "$CALIBRE_BUNDLE_DIR/calibre.app"
+  echo "Bundled Calibre runtime from $CALIBRE_APP_SOURCE"
+elif [ -x "$CALIBRE_CONVERTER_SOURCE" ]; then
+  mkdir -p "$CONVERTER_DIR"
+  cp "$CALIBRE_CONVERTER_SOURCE" "$CONVERTER_DIR/ebook-convert"
+  chmod +x "$CONVERTER_DIR/ebook-convert"
+  echo "Bundled standalone EPUB converter from $CALIBRE_CONVERTER_SOURCE"
+else
+  echo "warning: EPUB converter not bundled. Install Calibre or set KINDLE_SHARE_CALIBRE_APP=/path/to/calibre.app before packaging." >&2
+fi
 
 if [ -f "$ICON_SOURCE" ]; then
   mkdir -p "$ICONSET_DIR"

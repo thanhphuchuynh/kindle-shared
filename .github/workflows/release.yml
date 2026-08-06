@@ -39,6 +39,9 @@ jobs:
       - name: Run tests
         run: swift test
 
+      - name: Install Calibre for bundled EPUB conversion
+        run: brew install --cask calibre
+
       - name: Build app zip
         run: ./scripts/package-macos.sh
 

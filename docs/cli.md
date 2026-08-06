@@ -37,7 +37,7 @@ The server uses SwiftNIO instead of Apple's `Network` framework, so the CLI targ
 
 ## EPUB Conversion
 
-Kindle browsers may reject raw EPUB downloads. Kindle Share converts EPUB files to MOBI on download when Calibre's `ebook-convert` is installed.
+Kindle browsers may reject raw EPUB downloads. Kindle Share converts EPUB files to MOBI on download when a bundled converter or Calibre's `ebook-convert` is available.
 
 On macOS:
 
@@ -45,7 +45,7 @@ On macOS:
 brew install --cask calibre
 ```
 
-For a custom Calibre location:
+For a custom Calibre location while running the CLI directly:
 
 ```bash
 KINDLE_SHARE_EBOOK_CONVERT=/path/to/ebook-convert kindle-share serve --folder ~/Books --port 8787

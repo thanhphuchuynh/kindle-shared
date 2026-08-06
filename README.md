@@ -23,23 +23,30 @@ Then:
 
 Supported direct-download formats: `.pdf`, `.mobi`, `.azw`, `.azw3`.
 
-EPUB files can be selected too. Kindle Share converts `.epub` to `.mobi` on download when Calibre is installed on the sharing computer.
+EPUB files can be selected too. Kindle Share converts `.epub` to `.mobi` on download when a bundled converter or Calibre is available.
 
 The server only shares files from the selected folder and listens on port `8787`.
 
 ### EPUB Conversion
 
-Kindle browsers may reject raw EPUB downloads. To make EPUB downloads Kindle-friendly, install Calibre so Kindle Share can use `ebook-convert`:
+Kindle browsers may reject raw EPUB downloads. Release builds can bundle Calibre's `ebook-convert` helper so users do not need to install anything separately.
+
+To build a zip with the converter bundled, install Calibre on the build Mac:
 
 ```bash
 brew install --cask calibre
+./scripts/package-macos.sh
 ```
 
-Kindle Share looks for `ebook-convert` in common Calibre/Homebrew locations. You can also point to a custom executable:
+The packaging script copies `/Applications/calibre.app` into `KindleShare.app/Contents/Resources/Calibre/calibre.app` when it exists. That preserves Calibre's required launcher libraries, so users who install `KindleShare.app` do not need to install Calibre.
+
+You can also point to a custom Calibre app:
 
 ```bash
-KINDLE_SHARE_EBOOK_CONVERT=/path/to/ebook-convert swift run KindleShare
+KINDLE_SHARE_CALIBRE_APP=/path/to/calibre.app ./scripts/package-macos.sh
 ```
+
+At runtime, Kindle Share checks the bundled Calibre runtime first, then common Calibre/Homebrew locations.
 
 ### CLI Server
 

@@ -63,15 +63,28 @@ public struct EPUBConverter: EPUBConverting {
         let environmentPath = ProcessInfo.processInfo.environment["KINDLE_SHARE_EBOOK_CONVERT"]
         let absoluteCandidates = [
             environmentPath,
+            Bundle.main.resourceURL?
+                .appendingPathComponent("Calibre", isDirectory: true)
+                .appendingPathComponent("calibre.app", isDirectory: true)
+                .appendingPathComponent("Contents", isDirectory: true)
+                .appendingPathComponent("MacOS", isDirectory: true)
+                .appendingPathComponent("ebook-convert")
+                .path,
+            Bundle.main.resourceURL?
+                .appendingPathComponent("Converter", isDirectory: true)
+                .appendingPathComponent("ebook-convert")
+                .path,
+            Bundle.main.resourceURL?
+                .appendingPathComponent("Converter", isDirectory: true)
+                .appendingPathComponent("ebook-convert.exe")
+                .path,
             "/Applications/calibre.app/Contents/MacOS/ebook-convert",
             "/opt/homebrew/bin/ebook-convert",
             "/usr/local/bin/ebook-convert",
             "/usr/bin/ebook-convert"
         ].compactMap { $0 }
 
-        if let executable = absoluteCandidates
-            .map(URL.init(fileURLWithPath:))
-            .first(where: { FileManager.default.isExecutableFile(atPath: $0.path) }) {
+        if let executable = firstExecutableURL(in: absoluteCandidates) {
             return executable
         }
 
@@ -91,5 +104,11 @@ public struct EPUBConverter: EPUBConverting {
         }
 
         return nil
+    }
+
+    static func firstExecutableURL(in paths: [String]) -> URL? {
+        paths
+            .map(URL.init(fileURLWithPath:))
+            .first { FileManager.default.isExecutableFile(atPath: $0.path) }
     }
 }
