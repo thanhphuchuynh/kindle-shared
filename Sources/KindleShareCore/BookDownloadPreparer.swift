@@ -42,7 +42,7 @@ public struct BookDownloadPreparer: BookDownloadPreparing {
 
     public func prepare(book: BookFile) throws -> PreparedBookDownload {
         if book.fileExtension.lowercased() == "epub" {
-            let convertedURL = book.url.deletingPathExtension().appendingPathExtension("azw3")
+            let convertedURL = ConvertedBookNaming.azw3URL(for: book.url)
             if FileManager.default.fileExists(atPath: convertedURL.path) {
                 guard let data = try? Data(contentsOf: convertedURL) else {
                     throw BookDownloadPreparationError.fileReadFailed
@@ -58,7 +58,7 @@ public struct BookDownloadPreparer: BookDownloadPreparing {
             let data = try converter.convert(epubURL: book.url)
             return PreparedBookDownload(
                 data: data,
-                fileName: book.url.deletingPathExtension().lastPathComponent + ".azw3",
+                fileName: convertedURL.lastPathComponent,
                 fileExtension: "azw3"
             )
         }

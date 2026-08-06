@@ -11,6 +11,7 @@ final class ShareViewModel: ObservableObject {
         case convertBooks
         case copyURL
         case refresh
+        case removeBooks
         case sharing
     }
 
@@ -35,6 +36,7 @@ final class ShareViewModel: ObservableObject {
 
     @Published private(set) var selectedFolder: URL?
     @Published private(set) var selectedFiles: [URL] = []
+    @Published private(set) var removedFolderBookURLs = Set<URL>()
     @Published private(set) var books: [BookFile] = []
     @Published private(set) var isSharing = false
     @Published private(set) var localAddress = LocalIPAddressProvider.localIPv4Address()
@@ -69,6 +71,10 @@ final class ShareViewModel: ObservableObject {
     var selectedBook: BookFile? {
         guard let selectedBookID = selectedBookIDs.first else { return nil }
         return books.first { $0.id == selectedBookID }
+    }
+
+    var hasSelectedBooks: Bool {
+        !selectedBookIDs.isEmpty
     }
 
     var booksNeedingConversion: [BookFile] {
@@ -127,12 +133,15 @@ final class ShareViewModel: ObservableObject {
     func select(folder: URL) {
         stopSharing()
         selectedFolder = folder
+        removedFolderBookURLs = []
         refreshBooks()
     }
 
     func add(files urls: [URL]) {
         stopSharing()
-        selectedFiles = uniqueURLs(selectedFiles + urls)
+        let uniqueNewURLs = uniqueURLs(urls)
+        removedFolderBookURLs.subtract(uniqueNewURLs.map(\.standardizedFileURL))
+        selectedFiles = uniqueURLs(selectedFiles + uniqueNewURLs)
         refreshBooks()
     }
 
@@ -147,6 +156,7 @@ final class ShareViewModel: ObservableObject {
             let folderBooks = try selectedFolder.map { try scanner.scan(folder: $0) } ?? []
             let fileBooks = try scanner.scan(files: selectedFiles)
             books = uniqueBooks(folderBooks + fileBooks)
+                .filter { !removedFolderBookURLs.contains($0.url.standardizedFileURL) }
             if let selectedBookID = selectedBookIDs.first, !books.contains(where: { $0.id == selectedBookID }) {
                 selectedBookIDs = books.first.map { [$0.id] } ?? []
             } else if selectedBookIDs.isEmpty {
@@ -170,6 +180,24 @@ final class ShareViewModel: ObservableObject {
         runActionFeedback(.sharing) { [weak self] in
             self?.isSharing == true ? self?.stopSharing() : self?.startSharing()
         }
+    }
+
+    func removeSelectedBooks() {
+        guard activeAction == nil, !selectedBookIDs.isEmpty else { return }
+
+        activeAction = .removeBooks
+        defer { activeAction = nil }
+
+        stopSharing()
+
+        let selectedBooks = books.filter { selectedBookIDs.contains($0.id) }
+        let selectedURLs = Set(selectedBooks.map { $0.url.standardizedFileURL })
+
+        selectedFiles.removeAll { selectedURLs.contains($0.standardizedFileURL) }
+        removedFolderBookURLs.formUnion(selectedURLs)
+        selectedBookIDs = []
+        conversionMessage = selectedBooks.count == 1 ? "Removed 1 book from sharing." : "Removed \(selectedBooks.count) books from sharing."
+        refreshBooks()
     }
 
     func convertBooksNow() {
@@ -272,7 +300,7 @@ final class ShareViewModel: ObservableObject {
     }
 
     func convertedURL(for book: BookFile) -> URL {
-        book.url.deletingPathExtension().appendingPathExtension("azw3")
+        ConvertedBookNaming.azw3URL(for: book.url)
     }
 
     func downloadName(for book: BookFile) -> String {

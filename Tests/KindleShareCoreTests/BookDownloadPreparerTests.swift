@@ -39,7 +39,7 @@ struct BookDownloadPreparerTests {
             converter: MockEPUBConverter(result: .success(Data("mobi data".utf8)))
         ).prepare(book: book)
 
-        #expect(prepared.fileName == "A Book.azw3")
+        #expect(prepared.fileName == "KindleShare - A Book.azw3")
         #expect(prepared.fileExtension == "azw3")
         #expect(String(data: prepared.data, encoding: .utf8) == "mobi data")
     }
@@ -50,7 +50,7 @@ struct BookDownloadPreparerTests {
         defer { try? FileManager.default.removeItem(at: folder) }
 
         let epubURL = folder.appendingPathComponent("A Book.epub")
-        let mobiURL = folder.appendingPathComponent("A Book.azw3")
+        let mobiURL = folder.appendingPathComponent("KindleShare - A Book.azw3")
         try Data("epub data".utf8).write(to: epubURL)
         try Data("saved mobi".utf8).write(to: mobiURL)
 
@@ -65,7 +65,7 @@ struct BookDownloadPreparerTests {
             converter: MockEPUBConverter(result: .failure(.epubConversionFailed("should not run")))
         ).prepare(book: book)
 
-        #expect(prepared.fileName == "A Book.azw3")
+        #expect(prepared.fileName == "KindleShare - A Book.azw3")
         #expect(prepared.fileExtension == "azw3")
         #expect(String(data: prepared.data, encoding: .utf8) == "saved mobi")
     }

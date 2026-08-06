@@ -29,6 +29,18 @@ struct ContentView: View {
                 .disabled(viewModel.isLoading(.addBooks))
 
                 Button {
+                    viewModel.removeSelectedBooks()
+                } label: {
+                    if viewModel.isLoading(.removeBooks) {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label("Remove", systemImage: "trash")
+                    }
+                }
+                .disabled(!viewModel.hasSelectedBooks || viewModel.isLoading(.convertBooks))
+
+                Button {
                     viewModel.refreshBooksWithFeedback()
                 } label: {
                     if viewModel.isLoading(.refresh) {
@@ -450,6 +462,16 @@ struct ContentView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
+
+                    Button(role: .destructive) {
+                        viewModel.removeSelectedBooks()
+                    } label: {
+                        Label("Remove from Sharing", systemImage: "trash")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .disabled(viewModel.isLoading(.convertBooks))
 
                     Spacer()
                 }
