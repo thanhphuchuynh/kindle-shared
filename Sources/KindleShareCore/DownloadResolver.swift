@@ -4,7 +4,16 @@ public struct DownloadResolver: Sendable {
     private let booksByName: [String: BookFile]
 
     public init(books: [BookFile]) {
-        booksByName = Dictionary(uniqueKeysWithValues: books.map { ($0.name, $0) })
+        booksByName = Dictionary(
+            books.flatMap { book -> [(String, BookFile)] in
+                var names = [(book.name, book)]
+                if book.fileExtension.lowercased() == "epub" {
+                    names.append((ConvertedBookNaming.azw3FileName(for: book.url), book))
+                }
+                return names
+            },
+            uniquingKeysWith: { existing, _ in existing }
+        )
     }
 
     public func resolve(path: String) -> BookFile? {
