@@ -24,62 +24,70 @@ NSGraphicsContext.current?.imageInterpolation = .high
 NSGraphicsContext.current?.shouldAntialias = true
 
 let bounds = NSRect(x: 0, y: 0, width: size, height: size)
-color(244, 248, 255).setFill()
+color(247, 250, 252).setFill()
 NSBezierPath(rect: bounds).fill()
 
-let tile = roundedRect(x: 122, y: 122, width: 1010, height: 1010, radius: 244)
+color(38, 72, 100, 0.16).setFill()
+roundedRect(x: 168, y: 132, width: 918, height: 936, radius: 232).fill()
+
+let tile = roundedRect(x: 152, y: 166, width: 950, height: 950, radius: 232)
 let gradient = NSGradient(colors: [
-    color(25, 103, 210),
-    color(26, 115, 232),
-    color(66, 133, 244)
+    color(18, 24, 33),
+    color(27, 36, 48),
+    color(42, 58, 77)
 ])!
 gradient.draw(in: tile, angle: 315)
 
-color(7, 43, 96, 0.18).setFill()
-roundedRect(x: 186, y: 102, width: 882, height: 980, radius: 220).fill()
+let pageFill = color(245, 248, 248)
+let pageStroke = color(255, 255, 255)
+let accent = color(39, 185, 129)
 
-let bookColor = color(255, 255, 255)
-let bookWidth: CGFloat = 430
-let bookHeight: CGFloat = 382
-let bookX: CGFloat = 274
-let bookY: CGFloat = 424
-let spineX = bookX + bookWidth / 2
+let bookLeft = NSBezierPath()
+bookLeft.move(to: NSPoint(x: 604, y: 372))
+bookLeft.curve(to: NSPoint(x: 352, y: 432), controlPoint1: NSPoint(x: 520, y: 348), controlPoint2: NSPoint(x: 422, y: 374))
+bookLeft.line(to: NSPoint(x: 352, y: 798))
+bookLeft.curve(to: NSPoint(x: 604, y: 850), controlPoint1: NSPoint(x: 434, y: 772), controlPoint2: NSPoint(x: 526, y: 798))
+bookLeft.close()
 
-let leftPage = NSBezierPath()
-leftPage.move(to: NSPoint(x: spineX, y: bookY + 42))
-leftPage.curve(to: NSPoint(x: bookX + 82, y: bookY + 82), controlPoint1: NSPoint(x: spineX - 58, y: bookY + 32), controlPoint2: NSPoint(x: bookX + 138, y: bookY + 48))
-leftPage.line(to: NSPoint(x: bookX + 82, y: bookY + bookHeight - 86))
-leftPage.curve(to: NSPoint(x: spineX, y: bookY + bookHeight - 44), controlPoint1: NSPoint(x: bookX + 142, y: bookY + bookHeight - 62), controlPoint2: NSPoint(x: spineX - 54, y: bookY + bookHeight - 54))
+let bookRight = NSBezierPath()
+bookRight.move(to: NSPoint(x: 650, y: 372))
+bookRight.curve(to: NSPoint(x: 902, y: 432), controlPoint1: NSPoint(x: 734, y: 348), controlPoint2: NSPoint(x: 832, y: 374))
+bookRight.line(to: NSPoint(x: 902, y: 798))
+bookRight.curve(to: NSPoint(x: 650, y: 850), controlPoint1: NSPoint(x: 820, y: 772), controlPoint2: NSPoint(x: 728, y: 798))
+bookRight.close()
 
-let rightPage = NSBezierPath()
-rightPage.move(to: NSPoint(x: spineX, y: bookY + 42))
-rightPage.curve(to: NSPoint(x: bookX + bookWidth - 82, y: bookY + 82), controlPoint1: NSPoint(x: spineX + 58, y: bookY + 32), controlPoint2: NSPoint(x: bookX + bookWidth - 138, y: bookY + 48))
-rightPage.line(to: NSPoint(x: bookX + bookWidth - 82, y: bookY + bookHeight - 86))
-rightPage.curve(to: NSPoint(x: spineX, y: bookY + bookHeight - 44), controlPoint1: NSPoint(x: bookX + bookWidth - 142, y: bookY + bookHeight - 62), controlPoint2: NSPoint(x: spineX + 54, y: bookY + bookHeight - 54))
+pageFill.setFill()
+bookLeft.fill()
+bookRight.fill()
 
-strokePath(leftPage, color: bookColor, width: 52)
-strokePath(rightPage, color: bookColor, width: 52)
+strokePath(bookLeft, color: pageStroke.withAlphaComponent(0.96), width: 22)
+strokePath(bookRight, color: pageStroke.withAlphaComponent(0.96), width: 22)
 
-let centerLine = NSBezierPath()
-centerLine.move(to: NSPoint(x: spineX, y: bookY + 64))
-centerLine.line(to: NSPoint(x: spineX, y: bookY + bookHeight - 64))
-strokePath(centerLine, color: bookColor.withAlphaComponent(0.78), width: 34)
+let crease = NSBezierPath()
+crease.move(to: NSPoint(x: 627, y: 392))
+crease.line(to: NSPoint(x: 627, y: 820))
+strokePath(crease, color: color(190, 203, 213), width: 20)
 
-let wifiCenter = NSPoint(x: 832, y: 438)
-for (index, radius) in [105.0, 182.0, 258.0].enumerated() {
+let badge = NSBezierPath(ovalIn: NSRect(x: 744, y: 296, width: 250, height: 250))
+accent.setFill()
+badge.fill()
+
+let wifiColor = color(255, 255, 255)
+let wifiCenter = NSPoint(x: 869, y: 372)
+for radius in [48.0, 84.0] {
     let arc = NSBezierPath()
     arc.appendArc(
         withCenter: wifiCenter,
         radius: CGFloat(radius),
-        startAngle: 26,
-        endAngle: 154,
+        startAngle: 28,
+        endAngle: 152,
         clockwise: false
     )
-    strokePath(arc, color: bookColor.withAlphaComponent(index == 2 ? 0.88 : 0.96), width: 46)
+    strokePath(arc, color: wifiColor, width: 24)
 }
 
-bookColor.setFill()
-NSBezierPath(ovalIn: NSRect(x: wifiCenter.x - 35, y: wifiCenter.y - 36, width: 70, height: 70)).fill()
+wifiColor.setFill()
+NSBezierPath(ovalIn: NSRect(x: wifiCenter.x - 18, y: wifiCenter.y - 20, width: 36, height: 36)).fill()
 
 canvas.unlockFocus()
 
