@@ -27,7 +27,7 @@ That is the whole workflow.
 
 3/ This is not trying to replace Calibre.
 
-Calibre is powerful and library-centric. Kindle Share is intentionally smaller: a quick local book drop for PDF, EPUB, MOBI, AZW, and AZW3 files.
+Calibre is powerful and library-centric. Kindle Share is intentionally smaller: a quick local book drop for PDF, MOBI, AZW, and AZW3 files, with EPUB-to-MOBI conversion when Calibre is installed.
 
 4/ Why I wanted it:
 

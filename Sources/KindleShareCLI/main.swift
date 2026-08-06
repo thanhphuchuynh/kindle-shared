@@ -8,7 +8,7 @@ Usage:
   kindle-share serve --folder <path> [--port 8787]
 
 Options:
-  -f, --folder   Folder containing PDF, EPUB, MOBI, AZW, or AZW3 files.
+  -f, --folder   Folder containing PDF, MOBI, AZW, AZW3, or EPUB files.
   -p, --port     HTTP port to serve on. Defaults to 8787.
 """
 
@@ -26,6 +26,7 @@ func run() throws {
         let host = LocalIPAddressProvider.localIPv4Address() ?? "127.0.0.1"
         print("Kindle Share is serving \(books.count) book\(books.count == 1 ? "" : "s").")
         print("Open this on Kindle: http://\(host):\(port)")
+        print("EPUB downloads are converted to MOBI when Calibre's ebook-convert is installed.")
         print("Press Ctrl+C to stop.")
 
         RunLoop.current.run()

@@ -45,7 +45,7 @@ The product should stay smaller, calmer, and more focused than Calibre. It shoul
 
 ### v2: Conversion And Send Options
 
-- Optional EPUB to Kindle-friendly format conversion.
+- EPUB to Kindle-friendly format conversion, starting with optional Calibre integration.
 - Explore Calibre CLI integration for conversion instead of reimplementing a conversion engine.
 - Optional Send to Kindle integration for users who want Amazon cloud sync.
 - Keep local sharing as the primary workflow.

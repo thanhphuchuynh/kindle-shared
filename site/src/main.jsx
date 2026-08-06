@@ -183,7 +183,7 @@ function Diorama({ activeStep }) {
     ebookCard.position.set(-1.32, -0.22, 1.05);
     ebookCard.rotation.set(-Math.PI / 2, 0.1, 0.18);
     bookStack.add(ebookCard);
-    const ebookLabel = makeTextSprite("EPUB\nAZW3\nPDF", {
+    const ebookLabel = makeTextSprite("EPUB -> MOBI\nAZW3\nPDF", {
       width: 360,
       height: 240,
       size: 36,
@@ -439,7 +439,7 @@ function App() {
   const steps = [
     ["Laptop + ebooks", "Start with the computer and the book files already beside you."],
     ["Open app", "Kindle Share opens on the laptop and waits for a folder."],
-    ["Choose folder", "Select the folder that contains EPUB, PDF, MOBI, AZW, or AZW3 files."],
+    ["Choose folder", "Select the folder that contains PDF, MOBI, AZW, AZW3, or EPUB files."],
     ["Start server", "The app starts a small local server and shows a private Wi-Fi URL."],
     ["Open URL", "Type the local address into the Kindle browser."],
     ["Download book", "Tap a title and let Kindle pull the file directly."],

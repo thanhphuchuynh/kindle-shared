@@ -16,7 +16,7 @@ kindle-share serve --folder <path> [--port 8787]
 
 Options:
 
-- `--folder`, `-f`: folder containing `.pdf`, `.epub`, `.mobi`, `.azw`, or `.azw3` files.
+- `--folder`, `-f`: folder containing `.pdf`, `.mobi`, `.azw`, `.azw3`, or `.epub` files.
 - `--port`, `-p`: HTTP port. Defaults to `8787`.
 
 ## Build
@@ -34,6 +34,22 @@ swift build -c release --product kindle-share
 ```
 
 The server uses SwiftNIO instead of Apple's `Network` framework, so the CLI target is designed for cross-platform Swift builds. The macOS SwiftUI app remains macOS-only.
+
+## EPUB Conversion
+
+Kindle browsers may reject raw EPUB downloads. Kindle Share converts EPUB files to MOBI on download when Calibre's `ebook-convert` is installed.
+
+On macOS:
+
+```bash
+brew install --cask calibre
+```
+
+For a custom Calibre location:
+
+```bash
+KINDLE_SHARE_EBOOK_CONVERT=/path/to/ebook-convert kindle-share serve --folder ~/Books --port 8787
+```
 
 ## Example
 

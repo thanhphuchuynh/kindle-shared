@@ -3,10 +3,14 @@ import Foundation
 public enum HTMLRenderer {
     public static func renderIndex(books: [BookFile]) -> String {
         let rows = books.map { book in
-            """
+            let formatLabel = book.fileExtension.lowercased() == "epub"
+                ? "EPUB -> MOBI on download"
+                : book.fileExtension.uppercased()
+
+            return """
             <li>
               <a href="/download/\(book.name.urlPathEncoded)">\(book.name.htmlEscaped)</a>
-              <span>\(book.fileExtension.uppercased()) · \(book.displaySize.htmlEscaped)</span>
+              <span>\(formatLabel.htmlEscaped) · \(book.displaySize.htmlEscaped)</span>
             </li>
             """
         }
@@ -36,7 +40,7 @@ public enum HTMLRenderer {
         </head>
         <body>
           <h1>Kindle Share</h1>
-          <p>Tap a book to download it to this Kindle.</p>
+          <p>Tap a book to download it to this Kindle. EPUB files are converted to MOBI when Calibre is installed on the sharing computer.</p>
           \(content)
         </body>
         </html>

@@ -23,10 +23,11 @@ From there, you get a simple list of supported files and can download them direc
 Supported formats today:
 
 - PDF
-- EPUB
 - MOBI
 - AZW
 - AZW3
+
+EPUB files can be selected too. When Calibre is installed on the sharing computer, Kindle Share converts EPUB files to MOBI during download so Kindle browsers do not receive a raw EPUB file.
 
 ## Why local-first?
 

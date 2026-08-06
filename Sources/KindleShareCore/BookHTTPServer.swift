@@ -21,11 +21,13 @@ public final class BookHTTPServer: @unchecked Sendable {
 
     private let port: UInt16
     private let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    private let downloadPreparer: any BookDownloadPreparing
     private var channel: Channel?
     private var books: [BookFile] = []
 
-    public init(port: UInt16 = 8787) {
+    public init(port: UInt16 = 8787, downloadPreparer: any BookDownloadPreparing = BookDownloadPreparer()) {
         self.port = port
+        self.downloadPreparer = downloadPreparer
     }
 
     deinit {
@@ -44,9 +46,9 @@ public final class BookHTTPServer: @unchecked Sendable {
         let bootstrap = ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.backlog, value: 256)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer { [books] channel in
+            .childChannelInitializer { [books, downloadPreparer] channel in
                 channel.pipeline.configureHTTPServerPipeline().flatMap {
-                    channel.pipeline.addHandler(BookHTTPHandler(books: books))
+                    channel.pipeline.addHandler(BookHTTPHandler(books: books, downloadPreparer: downloadPreparer))
                 }
             }
             .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -74,10 +76,12 @@ private final class BookHTTPHandler: ChannelInboundHandler, @unchecked Sendable 
     typealias OutboundOut = HTTPServerResponsePart
 
     private let books: [BookFile]
+    private let downloadPreparer: any BookDownloadPreparing
     private var requestHead: HTTPRequestHead?
 
-    init(books: [BookFile]) {
+    init(books: [BookFile], downloadPreparer: any BookDownloadPreparing) {
         self.books = books
+        self.downloadPreparer = downloadPreparer
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -121,18 +125,32 @@ private final class BookHTTPHandler: ChannelInboundHandler, @unchecked Sendable 
     }
 
     private func sendFileResponse(context: ChannelHandlerContext, book: BookFile) {
-        guard let body = try? Data(contentsOf: book.url) else {
-            sendTextResponse(context: context, status: .notFound, body: "File Not Found")
+        let preparedDownload: PreparedBookDownload
+
+        do {
+            preparedDownload = try downloadPreparer.prepare(book: book)
+        } catch BookDownloadPreparationError.epubConversionUnavailable {
+            sendTextResponse(
+                context: context,
+                status: .notImplemented,
+                body: "EPUB conversion requires Calibre on the sharing computer. Install Calibre, restart sharing, then try this download again."
+            )
+            return
+        } catch let error as BookDownloadPreparationError {
+            sendTextResponse(context: context, status: .internalServerError, body: error.localizedDescription)
+            return
+        } catch {
+            sendTextResponse(context: context, status: .internalServerError, body: "Could not prepare this book for download.")
             return
         }
 
         var headers = HTTPHeaders()
-        headers.add(name: "Content-Type", value: mimeType(for: book.fileExtension))
-        headers.add(name: "Content-Length", value: "\(body.count)")
-        headers.add(name: "Content-Disposition", value: "attachment; filename=\"\(book.name.headerEscaped)\"")
+        headers.add(name: "Content-Type", value: mimeType(for: preparedDownload.fileExtension))
+        headers.add(name: "Content-Length", value: "\(preparedDownload.data.count)")
+        headers.add(name: "Content-Disposition", value: "attachment; filename=\"\(preparedDownload.fileName.headerEscaped)\"")
         headers.add(name: "Connection", value: "close")
 
-        sendResponse(context: context, status: .ok, headers: headers, body: body)
+        sendResponse(context: context, status: .ok, headers: headers, body: preparedDownload.data)
     }
 
     private func sendTextResponse(

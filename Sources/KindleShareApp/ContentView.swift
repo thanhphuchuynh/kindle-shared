@@ -95,7 +95,8 @@ struct ContentView: View {
             Section("Server") {
                 sidebarRow("Status", value: viewModel.isSharing ? "Sharing" : "Stopped", systemImage: viewModel.isSharing ? "checkmark.circle.fill" : "pause.circle")
                 sidebarRow("Port", value: "8787", systemImage: "network")
-                sidebarRow("Formats", value: "PDF EPUB AZW", systemImage: "doc.text")
+                sidebarRow("Formats", value: "PDF MOBI AZW", systemImage: "doc.text")
+                sidebarRow("EPUB", value: "Converts to MOBI", systemImage: "arrow.triangle.2.circlepath")
             }
 
             Section {
@@ -233,7 +234,7 @@ struct ContentView: View {
                 ContentUnavailableView("Choose a books folder", systemImage: "folder", description: Text("Use the toolbar to choose the folder you want to share with Kindle."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.books.isEmpty {
-                ContentUnavailableView("No supported books", systemImage: "doc.text.magnifyingglass", description: Text("Supported formats are PDF, EPUB, MOBI, AZW, and AZW3."))
+                ContentUnavailableView("No supported books", systemImage: "doc.text.magnifyingglass", description: Text("Supported formats are PDF, MOBI, AZW, AZW3, and EPUB with Calibre conversion."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Table(viewModel.books) {
@@ -260,13 +261,22 @@ struct ContentView: View {
                     }
                     .width(90)
 
-                    TableColumn("Status") { _ in
-                        Text("Ready")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.green)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(.green.opacity(0.12), in: Capsule())
+                    TableColumn("Status") { book in
+                        if book.fileExtension.lowercased() == "epub" {
+                            Text("Converts")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.orange)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(.orange.opacity(0.12), in: Capsule())
+                        } else {
+                            Text("Ready")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(.green.opacity(0.12), in: Capsule())
+                        }
                     }
                     .width(96)
                 }

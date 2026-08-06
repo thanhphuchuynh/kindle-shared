@@ -21,9 +21,25 @@ Then:
 3. Open the shown URL on the Kindle browser.
 4. Tap a book to download it.
 
-Supported formats: `.pdf`, `.epub`, `.mobi`, `.azw`, `.azw3`.
+Supported direct-download formats: `.pdf`, `.mobi`, `.azw`, `.azw3`.
+
+EPUB files can be selected too. Kindle Share converts `.epub` to `.mobi` on download when Calibre is installed on the sharing computer.
 
 The server only shares files from the selected folder and listens on port `8787`.
+
+### EPUB Conversion
+
+Kindle browsers may reject raw EPUB downloads. To make EPUB downloads Kindle-friendly, install Calibre so Kindle Share can use `ebook-convert`:
+
+```bash
+brew install --cask calibre
+```
+
+Kindle Share looks for `ebook-convert` in common Calibre/Homebrew locations. You can also point to a custom executable:
+
+```bash
+KINDLE_SHARE_EBOOK_CONVERT=/path/to/ebook-convert swift run KindleShare
+```
 
 ### CLI Server
 
