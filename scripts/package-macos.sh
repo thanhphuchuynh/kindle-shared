@@ -28,7 +28,7 @@ chmod +x "$MACOS_DIR/KindleShare"
 
 if [ -d "$CALIBRE_APP_SOURCE" ] && [ -x "$CALIBRE_APP_SOURCE/Contents/MacOS/ebook-convert" ]; then
   mkdir -p "$CALIBRE_BUNDLE_DIR"
-  cp -R "$CALIBRE_APP_SOURCE" "$CALIBRE_BUNDLE_DIR/calibre.app"
+  ditto --noextattr --norsrc "$CALIBRE_APP_SOURCE" "$CALIBRE_BUNDLE_DIR/calibre.app"
   xattr -cr "$CALIBRE_BUNDLE_DIR/calibre.app"
   echo "Bundled Calibre runtime from $CALIBRE_APP_SOURCE"
 elif [ -x "$CALIBRE_CONVERTER_SOURCE" ]; then
@@ -87,8 +87,12 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
 PLIST
 
 rm -rf "$ICONSET_DIR"
+find "$APP_DIR" -name ".DS_Store" -delete
+dot_clean -m "$APP_DIR"
 xattr -cr "$APP_DIR"
-codesign --force --deep --sign - "$APP_DIR"
+if ! codesign --force --deep --sign - "$APP_DIR"; then
+  echo "warning: ad-hoc signing failed. Continuing with an unsigned test build." >&2
+fi
 ditto -c -k --keepParent "$APP_DIR" "$DIST_DIR/KindleShare.zip"
 
 echo "Created $DIST_DIR/KindleShare.zip"

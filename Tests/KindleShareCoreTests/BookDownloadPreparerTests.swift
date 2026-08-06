@@ -44,6 +44,32 @@ struct BookDownloadPreparerTests {
         #expect(String(data: prepared.data, encoding: .utf8) == "mobi data")
     }
 
+    @Test("uses existing MOBI conversion beside EPUB")
+    func usesExistingMOBIConversionBesideEPUB() throws {
+        let folder = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+
+        let epubURL = folder.appendingPathComponent("A Book.epub")
+        let mobiURL = folder.appendingPathComponent("A Book.mobi")
+        try Data("epub data".utf8).write(to: epubURL)
+        try Data("saved mobi".utf8).write(to: mobiURL)
+
+        let book = BookFile(
+            name: "A Book.epub",
+            fileExtension: "epub",
+            sizeInBytes: 9,
+            url: epubURL
+        )
+
+        let prepared = try BookDownloadPreparer(
+            converter: MockEPUBConverter(result: .failure(.epubConversionFailed("should not run")))
+        ).prepare(book: book)
+
+        #expect(prepared.fileName == "A Book.mobi")
+        #expect(prepared.fileExtension == "mobi")
+        #expect(String(data: prepared.data, encoding: .utf8) == "saved mobi")
+    }
+
     @Test("reports unavailable EPUB conversion")
     func reportsUnavailableEPUBConversion() throws {
         let book = BookFile(

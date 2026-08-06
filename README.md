@@ -17,9 +17,12 @@ swift run KindleShare
 Then:
 
 1. Choose the folder that contains your books, or click `Add Books` to select individual files.
-2. Click `Start`.
-3. Open the shown URL on the Kindle browser.
-4. Tap a book to download it.
+2. Use `Convert EPUBs` if any EPUB files need to become MOBI before sharing.
+3. Click `Start`.
+4. Open the shown URL on the Kindle browser.
+5. Tap a book to download it.
+
+The right preview panel shows file details and an inline reader preview for PDFs.
 
 Supported direct-download formats: `.pdf`, `.mobi`, `.azw`, `.azw3`.
 

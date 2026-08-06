@@ -14,10 +14,6 @@ public struct EPUBConverter: EPUBConverting {
     }
 
     public func convert(epubURL: URL) throws -> Data {
-        guard let executableURL else {
-            throw BookDownloadPreparationError.epubConversionUnavailable
-        }
-
         let fileManager = FileManager.default
         let conversionFolder = fileManager.temporaryDirectory
             .appendingPathComponent("KindleShareConversions", isDirectory: true)
@@ -30,6 +26,25 @@ public struct EPUBConverter: EPUBConverting {
         defer {
             try? fileManager.removeItem(at: outputURL)
         }
+
+        try convert(epubURL: epubURL, outputURL: outputURL)
+
+        guard let data = try? Data(contentsOf: outputURL) else {
+            throw BookDownloadPreparationError.fileReadFailed
+        }
+
+        return data
+    }
+
+    public func convert(epubURL: URL, outputURL: URL) throws {
+        guard let executableURL else {
+            throw BookDownloadPreparationError.epubConversionUnavailable
+        }
+
+        try FileManager.default.createDirectory(
+            at: outputURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
 
         let process = Process()
         process.executableURL = executableURL
@@ -51,12 +66,6 @@ public struct EPUBConverter: EPUBConverting {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             throw BookDownloadPreparationError.epubConversionFailed(errorText?.isEmpty == false ? errorText! : "ebook-convert exited with status \(process.terminationStatus).")
         }
-
-        guard let data = try? Data(contentsOf: outputURL) else {
-            throw BookDownloadPreparationError.fileReadFailed
-        }
-
-        return data
     }
 
     public static func defaultExecutableURL() -> URL? {

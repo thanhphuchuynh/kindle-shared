@@ -8,6 +8,7 @@ final class ShareViewModel: ObservableObject {
     enum Action: Equatable {
         case chooseFolder
         case addBooks
+        case convertBooks
         case copyURL
         case refresh
         case sharing
@@ -19,6 +20,8 @@ final class ShareViewModel: ObservableObject {
     @Published private(set) var isSharing = false
     @Published private(set) var localAddress = LocalIPAddressProvider.localIPv4Address()
     @Published private(set) var activeAction: Action?
+    @Published private(set) var convertingBookIDs = Set<BookFile.ID>()
+    @Published private(set) var conversionMessage: String?
     @Published var selectedBookIDs = Set<BookFile.ID>()
     @Published var errorMessage: String?
 
@@ -46,6 +49,14 @@ final class ShareViewModel: ObservableObject {
     var selectedBook: BookFile? {
         guard let selectedBookID = selectedBookIDs.first else { return nil }
         return books.first { $0.id == selectedBookID }
+    }
+
+    var booksNeedingConversion: [BookFile] {
+        books.filter { needsConversion($0) }
+    }
+
+    var convertedBooksCount: Int {
+        books.filter { isConverted($0) }.count
     }
 
     var statusTitle: String {
@@ -141,6 +152,45 @@ final class ShareViewModel: ObservableObject {
         }
     }
 
+    func convertBooksNow() {
+        guard activeAction == nil else { return }
+
+        let targets = booksNeedingConversion
+        guard !targets.isEmpty else {
+            conversionMessage = "All EPUB books are already converted."
+            return
+        }
+
+        activeAction = .convertBooks
+        conversionMessage = "Converting \(targets.count) EPUB book\(targets.count == 1 ? "" : "s")..."
+        errorMessage = nil
+
+        Task { @MainActor in
+            defer {
+                convertingBookIDs = []
+                activeAction = nil
+                refreshBooks()
+            }
+
+            for book in targets {
+                convertingBookIDs = [book.id]
+
+                do {
+                    let outputURL = convertedURL(for: book)
+                    try await Task.detached {
+                        try EPUBConverter().convert(epubURL: book.url, outputURL: outputURL)
+                    }.value
+                } catch {
+                    errorMessage = "Could not convert \(book.name). \(error.localizedDescription)"
+                    conversionMessage = "Conversion stopped."
+                    return
+                }
+            }
+
+            conversionMessage = "Converted \(targets.count) EPUB book\(targets.count == 1 ? "" : "s") to MOBI."
+        }
+    }
+
     func startSharing() {
         guard hasSource else {
             errorMessage = "Choose a books folder or add books before starting sharing."
@@ -180,6 +230,42 @@ final class ShareViewModel: ObservableObject {
     func revealSelectedBookInFinder() {
         guard let selectedBook else { return }
         NSWorkspace.shared.activateFileViewerSelecting([selectedBook.url])
+    }
+
+    func openSelectedBookPreview() {
+        guard let selectedBook else { return }
+        NSWorkspace.shared.open(selectedBook.url)
+    }
+
+    func needsConversion(_ book: BookFile) -> Bool {
+        book.fileExtension.lowercased() == "epub" && !isConverted(book)
+    }
+
+    func isConverted(_ book: BookFile) -> Bool {
+        book.fileExtension.lowercased() == "epub"
+            && FileManager.default.fileExists(atPath: convertedURL(for: book).path)
+    }
+
+    func convertedURL(for book: BookFile) -> URL {
+        book.url.deletingPathExtension().appendingPathExtension("mobi")
+    }
+
+    func downloadName(for book: BookFile) -> String {
+        book.fileExtension.lowercased() == "epub"
+            ? convertedURL(for: book).lastPathComponent
+            : book.name
+    }
+
+    func conversionStatus(for book: BookFile) -> String {
+        if convertingBookIDs.contains(book.id) {
+            return "Converting"
+        }
+
+        if book.fileExtension.lowercased() != "epub" {
+            return "Not needed"
+        }
+
+        return isConverted(book) ? "Converted" : "Needs conversion"
     }
 
     func isLoading(_ action: Action) -> Bool {

@@ -39,6 +39,18 @@ struct ContentView: View {
                     }
                 }
                 .disabled(!viewModel.hasSource)
+
+                Button {
+                    viewModel.convertBooksNow()
+                } label: {
+                    if viewModel.isLoading(.convertBooks) {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label("Convert EPUBs", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                }
+                .disabled(viewModel.booksNeedingConversion.isEmpty)
             }
 
             ToolbarItem(placement: .primaryAction) {
@@ -120,6 +132,11 @@ struct ContentView: View {
                 sidebarRow("EPUB", value: "Converts to MOBI", systemImage: "arrow.triangle.2.circlepath")
             }
 
+            Section("Conversion") {
+                sidebarRow("Needs", value: "\(viewModel.booksNeedingConversion.count)", systemImage: "exclamationmark.triangle")
+                sidebarRow("Converted", value: "\(viewModel.convertedBooksCount)", systemImage: "checkmark.circle")
+            }
+
             Section {
                 VStack(alignment: .leading, spacing: 6) {
                     Label("Same Wi-Fi required", systemImage: "wifi")
@@ -139,6 +156,10 @@ struct ContentView: View {
         HSplitView {
             VStack(spacing: 0) {
                 connectionHeader
+
+                Divider()
+
+                conversionPanel
 
                 Divider()
 
@@ -240,6 +261,53 @@ struct ContentView: View {
             .background(.regularMaterial, in: Capsule())
     }
 
+    private var conversionPanel: some View {
+        HStack(spacing: 14) {
+            Label {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("EPUB Conversion")
+                        .font(.headline)
+
+                    Text(conversionSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            } icon: {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .foregroundStyle(viewModel.booksNeedingConversion.isEmpty ? Color.secondary : Color.orange)
+            }
+
+            Spacer()
+
+            if let conversionMessage = viewModel.conversionMessage {
+                Text(conversionMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Button {
+                viewModel.convertBooksNow()
+            } label: {
+                if viewModel.isLoading(.convertBooks) {
+                    HStack {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Converting")
+                    }
+                } else {
+                    Label("Convert EPUBs", systemImage: "arrow.triangle.2.circlepath")
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(viewModel.booksNeedingConversion.isEmpty)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 12)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
     private var bookTable: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -289,13 +357,22 @@ struct ContentView: View {
                     .width(90)
 
                     TableColumn("Status") { book in
-                        if book.fileExtension.lowercased() == "epub" {
-                            Text("Converts")
+                        let status = viewModel.conversionStatus(for: book)
+                        if viewModel.convertingBookIDs.contains(book.id) {
+                            HStack(spacing: 6) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("Converting")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.orange)
+                        } else if book.fileExtension.lowercased() == "epub" {
+                            Text(status)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(viewModel.isConverted(book) ? .green : .orange)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
-                                .background(.orange.opacity(0.12), in: Capsule())
+                                .background((viewModel.isConverted(book) ? Color.green : Color.orange).opacity(0.12), in: Capsule())
                         } else {
                             Text("Ready")
                                 .font(.caption.weight(.semibold))
@@ -326,28 +403,25 @@ struct ContentView: View {
 
             if let book = viewModel.selectedBook {
                 VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Image(systemName: book.fileExtension.lowercased() == "epub" ? "book.pages" : "doc.text")
-                            .font(.system(size: 34, weight: .regular))
-                            .foregroundStyle(.tint)
-                            .frame(width: 54, height: 54)
-                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                        Text(book.name)
-                            .font(.title3.weight(.semibold))
-                            .lineLimit(3)
-                            .truncationMode(.middle)
-                            .textSelection(.enabled)
-                    }
+                    readerPreview(for: book)
 
                     Divider()
 
                     VStack(spacing: 10) {
                         previewRow("Format", value: book.fileExtension.uppercased(), systemImage: "doc")
                         previewRow("Size", value: book.displaySize, systemImage: "internaldrive")
-                        previewRow("Download", value: downloadName(for: book), systemImage: "arrow.down.circle")
-                        previewRow("Conversion", value: conversionStatus(for: book), systemImage: "arrow.triangle.2.circlepath")
+                        previewRow("Download", value: viewModel.downloadName(for: book), systemImage: "arrow.down.circle")
+                        previewRow("Conversion", value: viewModel.conversionStatus(for: book), systemImage: "arrow.triangle.2.circlepath")
                     }
+
+                    Button {
+                        viewModel.openSelectedBookPreview()
+                    } label: {
+                        Label("Open Preview", systemImage: "book")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
 
                     Button {
                         viewModel.revealSelectedBookInFinder()
@@ -368,6 +442,38 @@ struct ContentView: View {
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    @ViewBuilder
+    private func readerPreview(for book: BookFile) -> some View {
+        if book.fileExtension.lowercased() == "pdf" {
+            PDFReaderPreview(url: book.url)
+                .frame(minHeight: 260)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(.quaternary)
+                }
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                Image(systemName: book.fileExtension.lowercased() == "epub" ? "book.pages" : "doc.text")
+                    .font(.system(size: 34, weight: .regular))
+                    .foregroundStyle(.tint)
+                    .frame(width: 54, height: 54)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                Text(book.name)
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(3)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+
+                Text("Reader preview is available for PDF. Use Open Preview for this format.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 
     private func previewRow(_ title: String, value: String, systemImage: String) -> some View {
@@ -407,23 +513,19 @@ struct ContentView: View {
             .frame(maxWidth: .infinity)
     }
 
-    private func downloadName(for book: BookFile) -> String {
-        if book.fileExtension.lowercased() == "epub" {
-            return book.url.deletingPathExtension().lastPathComponent + ".mobi"
-        }
-
-        return book.name
-    }
-
-    private func conversionStatus(for book: BookFile) -> String {
-        book.fileExtension.lowercased() == "epub" ? "Bundled Calibre" : "Not needed"
-    }
-
     private var urlHelpText: String {
         if let errorMessage = viewModel.errorMessage {
             return errorMessage
         }
 
         return "This address only works inside your local Wi-Fi network."
+    }
+
+    private var conversionSummary: String {
+        if viewModel.booksNeedingConversion.isEmpty {
+            return "All EPUB books are ready. You can still start sharing whenever you want."
+        }
+
+        return "\(viewModel.booksNeedingConversion.count) EPUB book\(viewModel.booksNeedingConversion.count == 1 ? "" : "s") can be converted now, before starting the server."
     }
 }
