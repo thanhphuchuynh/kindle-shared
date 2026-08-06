@@ -23,6 +23,23 @@ struct BookScannerTests {
         #expect(books.map(\.fileExtension) == ["pdf", "epub"])
     }
 
+    @Test("returns supported explicitly selected files")
+    func returnsSupportedExplicitlySelectedFiles() throws {
+        let folder = try TemporaryFolder()
+        try folder.writeFile(named: "Second.mobi", contents: "mobi")
+        try folder.writeFile(named: "First.pdf", contents: "pdf")
+        try folder.writeFile(named: "notes.txt", contents: "txt")
+
+        let books = try BookScanner().scan(files: [
+            folder.url.appending(path: "Second.mobi"),
+            folder.url.appending(path: "notes.txt"),
+            folder.url.appending(path: "First.pdf")
+        ])
+
+        #expect(books.map(\.name) == ["First.pdf", "Second.mobi"])
+        #expect(books.map(\.fileExtension) == ["pdf", "mobi"])
+    }
+
     @Test("formats file size for display")
     func formatsFileSizeForDisplay() {
         let book = BookFile(

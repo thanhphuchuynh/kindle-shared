@@ -22,6 +22,13 @@ struct ContentView: View {
                 .disabled(viewModel.isLoading(.chooseFolder))
 
                 Button {
+                    viewModel.addBooks()
+                } label: {
+                    Label("Add Books", systemImage: "plus")
+                }
+                .disabled(viewModel.isLoading(.addBooks))
+
+                Button {
                     viewModel.refreshBooksWithFeedback()
                 } label: {
                     if viewModel.isLoading(.refresh) {
@@ -31,7 +38,7 @@ struct ContentView: View {
                         Label("Refresh", systemImage: "arrow.clockwise")
                     }
                 }
-                .disabled(viewModel.selectedFolder == nil)
+                .disabled(!viewModel.hasSource)
             }
 
             ToolbarItem(placement: .primaryAction) {
@@ -45,7 +52,7 @@ struct ContentView: View {
                         Label(viewModel.isSharing ? "Stop Sharing" : "Start Sharing", systemImage: viewModel.isSharing ? "stop.fill" : "play.fill")
                     }
                 }
-                .disabled(viewModel.selectedFolder == nil)
+                .disabled(!viewModel.hasSource)
             }
         }
         .onDisappear {
@@ -90,6 +97,20 @@ struct ContentView: View {
                     Image(systemName: "folder")
                         .foregroundStyle(.tint)
                 }
+
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Added Books")
+                            .font(.callout.weight(.medium))
+
+                        Text(viewModel.addedFilesCount == 0 ? "No individual books" : "\(viewModel.addedFilesCount) selected")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "doc.badge.plus")
+                        .foregroundStyle(.tint)
+                }
             }
 
             Section("Server") {
@@ -115,12 +136,18 @@ struct ContentView: View {
     }
 
     private var detail: some View {
-        VStack(spacing: 0) {
-            connectionHeader
+        HSplitView {
+            VStack(spacing: 0) {
+                connectionHeader
 
-            Divider()
+                Divider()
 
-            bookTable
+                bookTable
+            }
+            .frame(minWidth: 580)
+
+            previewPanel
+                .frame(minWidth: 260, idealWidth: 300, maxWidth: 340)
         }
         .background(Color(nsColor: .windowBackgroundColor))
     }
@@ -194,7 +221,7 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.large)
-                        .disabled(viewModel.selectedFolder == nil)
+                        .disabled(!viewModel.hasSource)
                     }
                     .frame(width: 148)
                 }
@@ -221,7 +248,7 @@ struct ContentView: View {
 
                 Spacer()
 
-                if viewModel.selectedFolder != nil {
+                if viewModel.hasSource {
                     Text("\(viewModel.books.count) items")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -230,14 +257,14 @@ struct ContentView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
 
-            if viewModel.selectedFolder == nil {
-                ContentUnavailableView("Choose a books folder", systemImage: "folder", description: Text("Use the toolbar to choose the folder you want to share with Kindle."))
+            if !viewModel.hasSource {
+                ContentUnavailableView("Choose books to share", systemImage: "folder.badge.plus", description: Text("Use the toolbar to choose a folder or add individual books."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.books.isEmpty {
                 ContentUnavailableView("No supported books", systemImage: "doc.text.magnifyingglass", description: Text("Supported formats are PDF, MOBI, AZW, AZW3, and EPUB with Calibre conversion."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                Table(viewModel.books) {
+                Table(viewModel.books, selection: $viewModel.selectedBookIDs) {
                     TableColumn("Name") { book in
                         Label {
                             Text(book.name)
@@ -285,6 +312,81 @@ struct ContentView: View {
         }
     }
 
+    private var previewPanel: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Preview")
+                    .font(.headline)
+                Spacer()
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+
+            Divider()
+
+            if let book = viewModel.selectedBook {
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Image(systemName: book.fileExtension.lowercased() == "epub" ? "book.pages" : "doc.text")
+                            .font(.system(size: 34, weight: .regular))
+                            .foregroundStyle(.tint)
+                            .frame(width: 54, height: 54)
+                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                        Text(book.name)
+                            .font(.title3.weight(.semibold))
+                            .lineLimit(3)
+                            .truncationMode(.middle)
+                            .textSelection(.enabled)
+                    }
+
+                    Divider()
+
+                    VStack(spacing: 10) {
+                        previewRow("Format", value: book.fileExtension.uppercased(), systemImage: "doc")
+                        previewRow("Size", value: book.displaySize, systemImage: "internaldrive")
+                        previewRow("Download", value: downloadName(for: book), systemImage: "arrow.down.circle")
+                        previewRow("Conversion", value: conversionStatus(for: book), systemImage: "arrow.triangle.2.circlepath")
+                    }
+
+                    Button {
+                        viewModel.revealSelectedBookInFinder()
+                    } label: {
+                        Label("Reveal in Finder", systemImage: "finder")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+
+                    Spacer()
+                }
+                .padding(18)
+            } else {
+                ContentUnavailableView("No Book Selected", systemImage: "sidebar.right", description: Text("Select a row to see file and conversion details."))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding()
+            }
+        }
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    private func previewRow(_ title: String, value: String, systemImage: String) -> some View {
+        Label {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 10)
+                Text(value)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(2)
+            }
+            .font(.callout)
+        } icon: {
+            Image(systemName: systemImage)
+                .foregroundStyle(.secondary)
+        }
+    }
+
     private func sidebarRow(_ title: String, value: String, systemImage: String) -> some View {
         Label {
             HStack {
@@ -303,6 +405,18 @@ struct ContentView: View {
     private func toolbarLikeLabel(title: String, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
             .frame(maxWidth: .infinity)
+    }
+
+    private func downloadName(for book: BookFile) -> String {
+        if book.fileExtension.lowercased() == "epub" {
+            return book.url.deletingPathExtension().lastPathComponent + ".mobi"
+        }
+
+        return book.name
+    }
+
+    private func conversionStatus(for book: BookFile) -> String {
+        book.fileExtension.lowercased() == "epub" ? "Bundled Calibre" : "Not needed"
     }
 
     private var urlHelpText: String {
