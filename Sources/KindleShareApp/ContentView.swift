@@ -75,7 +75,7 @@ struct ContentView: View {
                         Label(viewModel.isSharing ? "Stop Sharing" : "Start Sharing", systemImage: viewModel.isSharing ? "stop.fill" : "play.fill")
                     }
                 }
-                .disabled(!viewModel.hasSource)
+                .disabled(!viewModel.isSharing && !viewModel.canStartSharing)
             }
         }
         .onDisappear {
@@ -253,7 +253,7 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.large)
-                        .disabled(!viewModel.hasSource)
+                        .disabled(!viewModel.isSharing && !viewModel.canStartSharing)
                     }
                     .frame(width: 148)
                 }
@@ -348,9 +348,26 @@ struct ContentView: View {
                 Spacer()
 
                 if viewModel.hasSource {
-                    Text("\(viewModel.sharedBooksCount) shared / \(viewModel.books.count) items")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        Text("\(viewModel.sharedBooksCount) shared / \(viewModel.books.count) items")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Button {
+                            viewModel.shareAllBooks()
+                        } label: {
+                            Label("Share All", systemImage: "checkmark.circle")
+                        }
+                        .disabled(viewModel.books.isEmpty || viewModel.sharedBooksCount == viewModel.books.count || viewModel.isLoading(.convertBooks))
+
+                        Button {
+                            viewModel.unshareAllBooks()
+                        } label: {
+                            Label("Share None", systemImage: "circle")
+                        }
+                        .disabled(viewModel.books.isEmpty || viewModel.sharedBooksCount == 0 || viewModel.isLoading(.convertBooks))
+                    }
+                    .controlSize(.small)
                 }
             }
             .padding(.horizontal, 24)

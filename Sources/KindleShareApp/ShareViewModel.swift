@@ -90,6 +90,10 @@ final class ShareViewModel: ObservableObject {
         sharedBooks.count
     }
 
+    var canStartSharing: Bool {
+        hasSource && sharedBooksCount > 0
+    }
+
     var convertedBooksCount: Int {
         books.filter { isConverted($0) }.count
     }
@@ -103,6 +107,8 @@ final class ShareViewModel: ObservableObject {
             "Kindle can download \(sharedBooksCount) book\(sharedBooksCount == 1 ? "" : "s")."
         } else if !hasSource {
             "Choose a folder or add books to begin."
+        } else if sharedBooksCount == 0 {
+            "Select at least one book to share."
         } else {
             "Ready to share on your local Wi-Fi."
         }
@@ -266,13 +272,12 @@ final class ShareViewModel: ObservableObject {
             return
         }
 
-        let booksToShare = sharedBooks
-        guard !booksToShare.isEmpty else {
+        refreshBooks()
+
+        guard !sharedBooks.isEmpty else {
             errorMessage = "Select at least one book to share before starting."
             return
         }
-
-        refreshBooks()
 
         do {
             try server.start(books: sharedBooks)
@@ -349,6 +354,18 @@ final class ShareViewModel: ObservableObject {
         unsharedBookURLs = nextUnsharedBookURLs
     }
 
+    func shareAllBooks() {
+        guard !books.isEmpty else { return }
+        stopSharing()
+        unsharedBookURLs = []
+    }
+
+    func unshareAllBooks() {
+        guard !books.isEmpty else { return }
+        stopSharing()
+        unsharedBookURLs = Set(books.map { $0.url.standardizedFileURL })
+    }
+
     func isLoading(_ action: Action) -> Bool {
         activeAction == action
     }
@@ -379,8 +396,10 @@ final class ShareViewModel: ObservableObject {
 
     private func includeConvertedOutput(_ outputURL: URL, convertedFrom book: BookFile) {
         let outputStandardizedURL = outputURL.standardizedFileURL
+        let originalStandardizedURL = book.url.standardizedFileURL
         removedFolderBookURLs.remove(outputStandardizedURL)
         unsharedBookURLs.remove(outputStandardizedURL)
+        unsharedBookURLs.insert(originalStandardizedURL)
 
         let originalWasAddedFile = selectedFiles.contains { $0.standardizedFileURL == book.url.standardizedFileURL }
         if selectedFolder == nil || originalWasAddedFile {
