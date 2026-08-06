@@ -446,15 +446,6 @@ struct ContentView: View {
                     }
 
                     Button {
-                        viewModel.openSelectedBookPreview()
-                    } label: {
-                        Label("Open Preview", systemImage: "book")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-
-                    Button {
                         viewModel.revealSelectedBookInFinder()
                     } label: {
                         Label("Reveal in Finder", systemImage: "finder")
@@ -495,25 +486,15 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .stroke(.quaternary)
                 }
+        } else if ["epub", "azw3", "mobi"].contains(book.fileExtension.lowercased()) {
+            BookTextPreview(book: book)
         } else {
-            VStack(alignment: .leading, spacing: 10) {
-                Image(systemName: book.fileExtension.lowercased() == "epub" ? "book.pages" : "doc.text")
-                    .font(.system(size: 34, weight: .regular))
-                    .foregroundStyle(.tint)
-                    .frame(width: 54, height: 54)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                Text(book.name)
-                    .font(.title3.weight(.semibold))
-                    .lineLimit(3)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
-
-                Text("Reader preview is available for PDF. Use Open Preview for this format.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            ContentUnavailableView(
+                "Preview unavailable",
+                systemImage: "book.closed",
+                description: Text("This format can still be shared, but Kindle Share cannot render it here yet.")
+            )
+            .frame(maxWidth: .infinity, minHeight: 260)
         }
     }
 

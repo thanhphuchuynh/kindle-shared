@@ -285,11 +285,6 @@ final class ShareViewModel: ObservableObject {
         NSWorkspace.shared.activateFileViewerSelecting([selectedBook.url])
     }
 
-    func openSelectedBookPreview() {
-        guard let selectedBook else { return }
-        NSWorkspace.shared.open(selectedBook.url)
-    }
-
     func needsConversion(_ book: BookFile) -> Bool {
         book.fileExtension.lowercased() == "epub" && !isConverted(book)
     }
