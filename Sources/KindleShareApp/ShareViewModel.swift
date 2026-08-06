@@ -14,6 +14,25 @@ final class ShareViewModel: ObservableObject {
         case sharing
     }
 
+    struct ConversionProgress: Equatable {
+        let completed: Int
+        let total: Int
+        let currentBookName: String?
+
+        var fraction: Double {
+            guard total > 0 else { return 0 }
+            return Double(completed) / Double(total)
+        }
+
+        var percentText: String {
+            "\(Int((fraction * 100).rounded()))%"
+        }
+
+        var countText: String {
+            "\(completed) of \(total)"
+        }
+    }
+
     @Published private(set) var selectedFolder: URL?
     @Published private(set) var selectedFiles: [URL] = []
     @Published private(set) var books: [BookFile] = []
@@ -21,6 +40,7 @@ final class ShareViewModel: ObservableObject {
     @Published private(set) var localAddress = LocalIPAddressProvider.localIPv4Address()
     @Published private(set) var activeAction: Action?
     @Published private(set) var convertingBookIDs = Set<BookFile.ID>()
+    @Published private(set) var conversionProgress: ConversionProgress?
     @Published private(set) var conversionMessage: String?
     @Published var selectedBookIDs = Set<BookFile.ID>()
     @Published var errorMessage: String?
@@ -162,6 +182,7 @@ final class ShareViewModel: ObservableObject {
         }
 
         activeAction = .convertBooks
+        conversionProgress = ConversionProgress(completed: 0, total: targets.count, currentBookName: targets.first?.name)
         conversionMessage = "Converting \(targets.count) EPUB book\(targets.count == 1 ? "" : "s")..."
         errorMessage = nil
 
@@ -172,8 +193,10 @@ final class ShareViewModel: ObservableObject {
                 refreshBooks()
             }
 
-            for book in targets {
+            for (index, book) in targets.enumerated() {
                 convertingBookIDs = [book.id]
+                conversionProgress = ConversionProgress(completed: index, total: targets.count, currentBookName: book.name)
+                conversionMessage = "Converting \(index + 1) of \(targets.count): \(book.name)"
 
                 do {
                     let outputURL = convertedURL(for: book)
@@ -185,6 +208,8 @@ final class ShareViewModel: ObservableObject {
                     conversionMessage = "Conversion stopped."
                     return
                 }
+
+                conversionProgress = ConversionProgress(completed: index + 1, total: targets.count, currentBookName: book.name)
             }
 
             conversionMessage = "Converted \(targets.count) EPUB book\(targets.count == 1 ? "" : "s") to AZW3."

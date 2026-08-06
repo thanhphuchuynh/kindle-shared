@@ -44,13 +44,12 @@ struct ContentView: View {
                     viewModel.convertBooksNow()
                 } label: {
                     if viewModel.isLoading(.convertBooks) {
-                        ProgressView()
-                            .controlSize(.small)
+                        Label(viewModel.conversionProgress?.percentText ?? "Converting", systemImage: "arrow.triangle.2.circlepath")
                     } else {
                         Label("Convert EPUBs", systemImage: "arrow.triangle.2.circlepath")
                     }
                 }
-                .disabled(viewModel.booksNeedingConversion.isEmpty)
+                .disabled(viewModel.booksNeedingConversion.isEmpty || viewModel.isLoading(.convertBooks))
             }
 
             ToolbarItem(placement: .primaryAction) {
@@ -280,7 +279,27 @@ struct ContentView: View {
 
             Spacer()
 
-            if let conversionMessage = viewModel.conversionMessage {
+            if let progress = viewModel.conversionProgress, viewModel.isLoading(.convertBooks) {
+                VStack(alignment: .trailing, spacing: 5) {
+                    HStack(spacing: 8) {
+                        Text("\(progress.countText) • \(progress.percentText)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        ProgressView(value: progress.fraction)
+                            .frame(width: 120)
+                    }
+
+                    if let currentBookName = progress.currentBookName {
+                        Text(currentBookName)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(width: 220, alignment: .trailing)
+                    }
+                }
+            } else if let conversionMessage = viewModel.conversionMessage {
                 Text(conversionMessage)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -294,14 +313,14 @@ struct ContentView: View {
                     HStack {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Converting")
+                        Text(viewModel.conversionProgress?.percentText ?? "Converting")
                     }
                 } else {
                     Label("Convert EPUBs", systemImage: "arrow.triangle.2.circlepath")
                 }
             }
             .buttonStyle(.bordered)
-            .disabled(viewModel.booksNeedingConversion.isEmpty)
+            .disabled(viewModel.booksNeedingConversion.isEmpty || viewModel.isLoading(.convertBooks))
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 12)
