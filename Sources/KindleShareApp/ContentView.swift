@@ -3,6 +3,7 @@ import KindleShareCore
 
 struct ContentView: View {
     @StateObject private var viewModel = ShareViewModel()
+    @State private var workspaceMode = WorkspaceMode.preview
 
     var body: some View {
         NavigationSplitView {
@@ -13,6 +14,17 @@ struct ContentView: View {
         }
         .navigationTitle("Kindle Share")
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("Mode", selection: $workspaceMode) {
+                    ForEach(WorkspaceMode.allCases) { mode in
+                        Label(mode.title, systemImage: mode.systemImage)
+                            .tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 300)
+            }
+
             ToolbarItemGroup {
                 Button {
                     viewModel.chooseFolder()
@@ -52,30 +64,22 @@ struct ContentView: View {
                 }
                 .disabled(!viewModel.hasSource)
 
-                Button {
-                    viewModel.convertBooksNow()
-                } label: {
-                    if viewModel.isLoading(.convertBooks) {
-                        Label(viewModel.conversionProgress?.percentText ?? "Converting", systemImage: "arrow.triangle.2.circlepath")
-                    } else {
-                        Label("Convert EPUBs", systemImage: "arrow.triangle.2.circlepath")
-                    }
-                }
-                .disabled(viewModel.booksNeedingConversion.isEmpty || viewModel.isLoading(.convertBooks))
             }
 
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    viewModel.toggleSharing()
-                } label: {
-                    if viewModel.isLoading(.sharing) {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Label(viewModel.isSharing ? "Stop Sharing" : "Start Sharing", systemImage: viewModel.isSharing ? "stop.fill" : "play.fill")
+                if workspaceMode == .share {
+                    Button {
+                        viewModel.toggleSharing()
+                    } label: {
+                        if viewModel.isLoading(.sharing) {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Label(viewModel.isSharing ? "Stop Sharing" : "Start Sharing", systemImage: viewModel.isSharing ? "stop.fill" : "play.fill")
+                        }
                     }
+                    .disabled(!viewModel.isSharing && !viewModel.canStartSharing)
                 }
-                .disabled(!viewModel.isSharing && !viewModel.canStartSharing)
             }
         }
         .onDisappear {
@@ -150,9 +154,9 @@ struct ContentView: View {
 
             Section {
                 VStack(alignment: .leading, spacing: 6) {
-                    Label("Same Wi-Fi required", systemImage: "wifi")
+                    Label(modeHintTitle, systemImage: workspaceMode.systemImage)
                         .font(.callout.weight(.semibold))
-                    Text("Open the Kindle browser and enter the address shown in the main view.")
+                    Text(modeHintText)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -166,11 +170,7 @@ struct ContentView: View {
     private var detail: some View {
         HSplitView {
             VStack(spacing: 0) {
-                connectionHeader
-
-                Divider()
-
-                conversionPanel
+                modeHeader
 
                 Divider()
 
@@ -182,6 +182,64 @@ struct ContentView: View {
                 .frame(minWidth: 260, idealWidth: 300, maxWidth: 340)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    @ViewBuilder
+    private var modeHeader: some View {
+        switch workspaceMode {
+        case .preview:
+            simpleHeader(
+                title: "Preview books",
+                subtitle: viewModel.hasSource ? "\(viewModel.books.count) book\(viewModel.books.count == 1 ? "" : "s") loaded." : "Choose a folder or add books to preview."
+            )
+        case .convert:
+            VStack(spacing: 0) {
+                simpleHeader(
+                    title: "Convert EPUBs",
+                    subtitle: viewModel.booksNeedingConversion.isEmpty ? "No EPUB books need conversion." : "\(viewModel.booksNeedingConversion.count) EPUB book\(viewModel.booksNeedingConversion.count == 1 ? "" : "s") ready to convert."
+                )
+
+                Divider()
+
+                conversionPanel
+            }
+        case .share:
+            connectionHeader
+        }
+    }
+
+    private func simpleHeader(title: String, subtitle: String) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.title.bold())
+
+                Text(subtitle)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if workspaceMode == .convert {
+                Button {
+                    viewModel.convertBooksNow()
+                } label: {
+                    if viewModel.isLoading(.convertBooks) {
+                        HStack {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text(viewModel.conversionProgress?.percentText ?? "Converting")
+                        }
+                    } else {
+                        Label("Convert EPUBs", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(viewModel.booksNeedingConversion.isEmpty || viewModel.isLoading(.convertBooks))
+            }
+        }
+        .padding(24)
     }
 
     private var connectionHeader: some View {
@@ -374,7 +432,7 @@ struct ContentView: View {
             .padding(.vertical, 12)
 
             if !viewModel.hasSource {
-                ContentUnavailableView("Choose books to share", systemImage: "folder.badge.plus", description: Text("Use the toolbar to choose a folder or add individual books."))
+                ContentUnavailableView("Choose books", systemImage: "folder.badge.plus", description: Text("Use the toolbar to choose a folder or add individual books."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.books.isEmpty {
                 ContentUnavailableView("No supported books", systemImage: "doc.text.magnifyingglass", description: Text("Supported formats are PDF, MOBI, AZW, AZW3, and EPUB with boko conversion."))
@@ -577,5 +635,57 @@ struct ContentView: View {
         }
 
         return "\(viewModel.booksNeedingConversion.count) EPUB book\(viewModel.booksNeedingConversion.count == 1 ? "" : "s") can be converted to AZW3 now, before starting the server."
+    }
+
+    private var modeHintTitle: String {
+        switch workspaceMode {
+        case .preview:
+            "Preview locally"
+        case .convert:
+            "Convert locally"
+        case .share:
+            "Same Wi-Fi required"
+        }
+    }
+
+    private var modeHintText: String {
+        switch workspaceMode {
+        case .preview:
+            "Select a book to read a quick preview inside Kindle Share."
+        case .convert:
+            "EPUB outputs are saved beside the source book with a KindleShare prefix."
+        case .share:
+            "Open the Kindle browser and enter the address shown in the main view."
+        }
+    }
+}
+
+private enum WorkspaceMode: String, CaseIterable, Identifiable {
+    case preview
+    case convert
+    case share
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .preview:
+            "Preview"
+        case .convert:
+            "Convert"
+        case .share:
+            "Share"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .preview:
+            "book"
+        case .convert:
+            "arrow.triangle.2.circlepath"
+        case .share:
+            "wifi"
+        }
     }
 }
