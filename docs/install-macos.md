@@ -14,7 +14,7 @@ dist/KindleShare.zip
 
 Send `KindleShare.zip` to the other Mac, unzip it, then move `KindleShare.app` to `/Applications`.
 
-Release zips include the EPUB converter inside the app bundle. Users do not need to install Calibre separately.
+Release zips include the EPUB converter inside the app bundle. Users do not need to install boko separately.
 
 If macOS blocks the app because it was downloaded from another machine, run:
 
@@ -38,6 +38,7 @@ The release asset can be downloaded from the GitHub Releases page.
 ## Notes
 
 - This build is ad-hoc signed, not notarized by Apple.
-- EPUB conversion is bundled in release zips when Calibre is available on the build machine.
+- EPUB conversion is bundled in release zips via boko.
+- boko is GPL-3.0-or-later. Its license is included in the app bundle at `KindleShare.app/Contents/Resources/Boko/LICENSE-GPL-3.0-or-later.txt`.
 - `dist/` is a local build output and should not be committed to git.
 - The GitHub Actions release uses the same `scripts/package-macos.sh` script as local packaging.

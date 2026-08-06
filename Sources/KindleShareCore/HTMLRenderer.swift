@@ -4,7 +4,7 @@ public enum HTMLRenderer {
     public static func renderIndex(books: [BookFile]) -> String {
         let rows = books.map { book in
             let formatLabel = book.fileExtension.lowercased() == "epub"
-                ? "EPUB -> MOBI on download"
+                ? "EPUB -> AZW3 on download"
                 : book.fileExtension.uppercased()
 
             return """
@@ -40,7 +40,7 @@ public enum HTMLRenderer {
         </head>
         <body>
           <h1>Kindle Share</h1>
-          <p>Tap a book to download it to this Kindle. EPUB files are converted to MOBI when Calibre is installed on the sharing computer.</p>
+          <p>Tap a book to download it to this Kindle. EPUB files are converted to AZW3 when boko is bundled or installed on the sharing computer.</p>
           \(content)
         </body>
         </html>

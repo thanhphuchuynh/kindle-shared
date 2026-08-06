@@ -24,7 +24,7 @@ public enum BookDownloadPreparationError: LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .epubConversionUnavailable:
-            "EPUB conversion requires Calibre. Install Calibre so Kindle Share can convert EPUB files to MOBI before download."
+            "EPUB conversion requires boko. Install or bundle boko so Kindle Share can convert EPUB files to AZW3 before download."
         case .epubConversionFailed(let message):
             "Could not convert EPUB for Kindle. \(message)"
         case .fileReadFailed:
@@ -42,7 +42,7 @@ public struct BookDownloadPreparer: BookDownloadPreparing {
 
     public func prepare(book: BookFile) throws -> PreparedBookDownload {
         if book.fileExtension.lowercased() == "epub" {
-            let convertedURL = book.url.deletingPathExtension().appendingPathExtension("mobi")
+            let convertedURL = book.url.deletingPathExtension().appendingPathExtension("azw3")
             if FileManager.default.fileExists(atPath: convertedURL.path) {
                 guard let data = try? Data(contentsOf: convertedURL) else {
                     throw BookDownloadPreparationError.fileReadFailed
@@ -51,15 +51,15 @@ public struct BookDownloadPreparer: BookDownloadPreparing {
                 return PreparedBookDownload(
                     data: data,
                     fileName: convertedURL.lastPathComponent,
-                    fileExtension: "mobi"
+                    fileExtension: "azw3"
                 )
             }
 
             let data = try converter.convert(epubURL: book.url)
             return PreparedBookDownload(
                 data: data,
-                fileName: book.url.deletingPathExtension().lastPathComponent + ".mobi",
-                fileExtension: "mobi"
+                fileName: book.url.deletingPathExtension().lastPathComponent + ".azw3",
+                fileExtension: "azw3"
             )
         }
 

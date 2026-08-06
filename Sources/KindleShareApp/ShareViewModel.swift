@@ -187,7 +187,7 @@ final class ShareViewModel: ObservableObject {
                 }
             }
 
-            conversionMessage = "Converted \(targets.count) EPUB book\(targets.count == 1 ? "" : "s") to MOBI."
+            conversionMessage = "Converted \(targets.count) EPUB book\(targets.count == 1 ? "" : "s") to AZW3."
         }
     }
 
@@ -247,7 +247,7 @@ final class ShareViewModel: ObservableObject {
     }
 
     func convertedURL(for book: BookFile) -> URL {
-        book.url.deletingPathExtension().appendingPathExtension("mobi")
+        book.url.deletingPathExtension().appendingPathExtension("azw3")
     }
 
     func downloadName(for book: BookFile) -> String {
@@ -265,7 +265,7 @@ final class ShareViewModel: ObservableObject {
             return "Not needed"
         }
 
-        return isConverted(book) ? "Converted" : "Needs conversion"
+        return isConverted(book) ? "Converted to AZW3" : "Needs conversion"
     }
 
     func isLoading(_ action: Action) -> Bool {

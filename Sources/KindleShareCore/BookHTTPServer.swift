@@ -133,7 +133,7 @@ private final class BookHTTPHandler: ChannelInboundHandler, @unchecked Sendable 
             sendTextResponse(
                 context: context,
                 status: .notImplemented,
-                body: "EPUB conversion requires Calibre on the sharing computer. Install Calibre, restart sharing, then try this download again."
+                body: "EPUB conversion requires the bundled boko converter. Rebuild Kindle Share with boko bundled, restart sharing, then try this download again."
             )
             return
         } catch let error as BookDownloadPreparationError {

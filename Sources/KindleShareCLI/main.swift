@@ -26,7 +26,7 @@ func run() throws {
         let host = LocalIPAddressProvider.localIPv4Address() ?? "127.0.0.1"
         print("Kindle Share is serving \(books.count) book\(books.count == 1 ? "" : "s").")
         print("Open this on Kindle: http://\(host):\(port)")
-        print("EPUB downloads are converted to MOBI when Calibre's ebook-convert is installed.")
+        print("EPUB downloads are converted to AZW3 when boko is installed or bundled.")
         print("Press Ctrl+C to stop.")
 
         RunLoop.current.run()

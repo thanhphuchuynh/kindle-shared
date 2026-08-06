@@ -129,7 +129,7 @@ struct ContentView: View {
                 sidebarRow("Status", value: viewModel.isSharing ? "Sharing" : "Stopped", systemImage: viewModel.isSharing ? "checkmark.circle.fill" : "pause.circle")
                 sidebarRow("Port", value: "8787", systemImage: "network")
                 sidebarRow("Formats", value: "PDF MOBI AZW", systemImage: "doc.text")
-                sidebarRow("EPUB", value: "Converts to MOBI", systemImage: "arrow.triangle.2.circlepath")
+                sidebarRow("EPUB", value: "Converts to AZW3", systemImage: "arrow.triangle.2.circlepath")
             }
 
             Section("Conversion") {
@@ -329,7 +329,7 @@ struct ContentView: View {
                 ContentUnavailableView("Choose books to share", systemImage: "folder.badge.plus", description: Text("Use the toolbar to choose a folder or add individual books."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.books.isEmpty {
-                ContentUnavailableView("No supported books", systemImage: "doc.text.magnifyingglass", description: Text("Supported formats are PDF, MOBI, AZW, AZW3, and EPUB with Calibre conversion."))
+                ContentUnavailableView("No supported books", systemImage: "doc.text.magnifyingglass", description: Text("Supported formats are PDF, MOBI, AZW, AZW3, and EPUB with boko conversion."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Table(viewModel.books, selection: $viewModel.selectedBookIDs) {
@@ -523,9 +523,9 @@ struct ContentView: View {
 
     private var conversionSummary: String {
         if viewModel.booksNeedingConversion.isEmpty {
-            return "All EPUB books are ready. You can still start sharing whenever you want."
+            return "All EPUB books are converted or ready. You can still start sharing whenever you want."
         }
 
-        return "\(viewModel.booksNeedingConversion.count) EPUB book\(viewModel.booksNeedingConversion.count == 1 ? "" : "s") can be converted now, before starting the server."
+        return "\(viewModel.booksNeedingConversion.count) EPUB book\(viewModel.booksNeedingConversion.count == 1 ? "" : "s") can be converted to AZW3 now, before starting the server."
     }
 }

@@ -17,7 +17,7 @@ swift run KindleShare
 Then:
 
 1. Choose the folder that contains your books, or click `Add Books` to select individual files.
-2. Use `Convert EPUBs` if any EPUB files need to become MOBI before sharing.
+2. Use `Convert EPUBs` if any EPUB files need to become AZW3 before sharing.
 3. Click `Start`.
 4. Open the shown URL on the Kindle browser.
 5. Tap a book to download it.
@@ -26,30 +26,27 @@ The right preview panel shows file details and an inline reader preview for PDFs
 
 Supported direct-download formats: `.pdf`, `.mobi`, `.azw`, `.azw3`.
 
-EPUB files can be selected too. Kindle Share converts `.epub` to `.mobi` on download when a bundled converter or Calibre is available.
+EPUB files can be selected too. Kindle Share converts `.epub` to `.azw3` with the bundled boko converter.
 
 The server only shares files from the selected folder and listens on port `8787`.
 
 ### EPUB Conversion
 
-Kindle browsers may reject raw EPUB downloads. Release builds can bundle Calibre's `ebook-convert` helper so users do not need to install anything separately.
+Kindle browsers may reject raw EPUB downloads. Release builds bundle the boko converter so users do not need to install anything separately.
 
-To build a zip with the converter bundled, install Calibre on the build Mac:
+To build a zip with the converter bundled:
 
 ```bash
-brew install --cask calibre
 ./scripts/package-macos.sh
 ```
 
-The packaging script copies `/Applications/calibre.app` into `KindleShare.app/Contents/Resources/Calibre/calibre.app` when it exists. That preserves Calibre's required launcher libraries, so users who install `KindleShare.app` do not need to install Calibre.
-
-You can also point to a custom Calibre app:
+The packaging script builds boko and copies the binary into `KindleShare.app/Contents/Resources/Boko/boko`. You can also point to a prebuilt boko binary:
 
 ```bash
-KINDLE_SHARE_CALIBRE_APP=/path/to/calibre.app ./scripts/package-macos.sh
+KINDLE_SHARE_BOKO=/path/to/boko ./scripts/package-macos.sh
 ```
 
-At runtime, Kindle Share checks the bundled Calibre runtime first, then common Calibre/Homebrew locations.
+At runtime, Kindle Share checks the bundled boko binary first, then common Homebrew/system locations.
 
 ### CLI Server
 

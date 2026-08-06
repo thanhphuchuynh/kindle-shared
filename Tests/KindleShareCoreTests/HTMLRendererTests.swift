@@ -20,7 +20,7 @@ struct HTMLRendererTests {
         #expect(html.contains("Kindle Share"))
         #expect(html.contains("A Book.epub"))
         #expect(html.contains("/download/A%20Book.epub"))
-        #expect(html.contains("EPUB -&gt; MOBI on download"))
+        #expect(html.contains("EPUB -&gt; AZW3 on download"))
         #expect(html.contains("2 KB"))
     }
 }

@@ -21,7 +21,7 @@ public struct EPUBConverter: EPUBConverting {
 
         let outputURL = conversionFolder
             .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("mobi")
+            .appendingPathExtension("azw3")
 
         defer {
             try? fileManager.removeItem(at: outputURL)
@@ -48,7 +48,7 @@ public struct EPUBConverter: EPUBConverting {
 
         let process = Process()
         process.executableURL = executableURL
-        process.arguments = [epubURL.path, outputURL.path]
+        process.arguments = ["convert", epubURL.path, outputURL.path, "--to", "azw3", "--quiet"]
 
         let errorPipe = Pipe()
         process.standardError = errorPipe
@@ -64,33 +64,25 @@ public struct EPUBConverter: EPUBConverting {
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
             let errorText = String(data: errorData, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            throw BookDownloadPreparationError.epubConversionFailed(errorText?.isEmpty == false ? errorText! : "ebook-convert exited with status \(process.terminationStatus).")
+            throw BookDownloadPreparationError.epubConversionFailed(errorText?.isEmpty == false ? errorText! : "boko exited with status \(process.terminationStatus).")
         }
     }
 
     public static func defaultExecutableURL() -> URL? {
-        let environmentPath = ProcessInfo.processInfo.environment["KINDLE_SHARE_EBOOK_CONVERT"]
+        let environmentPath = ProcessInfo.processInfo.environment["KINDLE_SHARE_BOKO"]
         let absoluteCandidates = [
             environmentPath,
             Bundle.main.resourceURL?
-                .appendingPathComponent("Calibre", isDirectory: true)
-                .appendingPathComponent("calibre.app", isDirectory: true)
-                .appendingPathComponent("Contents", isDirectory: true)
-                .appendingPathComponent("MacOS", isDirectory: true)
-                .appendingPathComponent("ebook-convert")
+                .appendingPathComponent("Boko", isDirectory: true)
+                .appendingPathComponent("boko")
                 .path,
             Bundle.main.resourceURL?
-                .appendingPathComponent("Converter", isDirectory: true)
-                .appendingPathComponent("ebook-convert")
+                .appendingPathComponent("Boko", isDirectory: true)
+                .appendingPathComponent("boko.exe")
                 .path,
-            Bundle.main.resourceURL?
-                .appendingPathComponent("Converter", isDirectory: true)
-                .appendingPathComponent("ebook-convert.exe")
-                .path,
-            "/Applications/calibre.app/Contents/MacOS/ebook-convert",
-            "/opt/homebrew/bin/ebook-convert",
-            "/usr/local/bin/ebook-convert",
-            "/usr/bin/ebook-convert"
+            "/opt/homebrew/bin/boko",
+            "/usr/local/bin/boko",
+            "/usr/bin/boko"
         ].compactMap { $0 }
 
         if let executable = firstExecutableURL(in: absoluteCandidates) {
@@ -103,7 +95,7 @@ public struct EPUBConverter: EPUBConverting {
             .map(String.init) ?? []
 
         for folder in pathFolders {
-            for executableName in ["ebook-convert", "ebook-convert.exe"] {
+            for executableName in ["boko", "boko.exe"] {
                 let executableURL = URL(fileURLWithPath: folder)
                     .appendingPathComponent(executableName)
                 if FileManager.default.isExecutableFile(atPath: executableURL.path) {
