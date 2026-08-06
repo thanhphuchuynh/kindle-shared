@@ -112,7 +112,7 @@ struct ContentView: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
 
-                        Text(viewModel.selectedFolder == nil ? "No folder selected" : "\(viewModel.books.count) books ready")
+                        Text(viewModel.selectedFolder == nil ? "No folder selected" : "\(viewModel.sharedBooksCount) of \(viewModel.books.count) shared")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -342,13 +342,13 @@ struct ContentView: View {
     private var bookTable: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Shared Books")
+                Text("Books")
                     .font(.headline)
 
                 Spacer()
 
                 if viewModel.hasSource {
-                    Text("\(viewModel.books.count) items")
+                    Text("\(viewModel.sharedBooksCount) shared / \(viewModel.books.count) items")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -364,6 +364,16 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Table(viewModel.books, selection: $viewModel.selectedBookIDs) {
+                    TableColumn("Share") { book in
+                        Toggle("", isOn: Binding(
+                            get: { viewModel.isBookShared(book) },
+                            set: { viewModel.setBook(book, shared: $0) }
+                        ))
+                        .labelsHidden()
+                        .disabled(viewModel.isLoading(.convertBooks))
+                    }
+                    .width(54)
+
                     TableColumn("Name") { book in
                         Label {
                             Text(book.name)
@@ -443,6 +453,7 @@ struct ContentView: View {
                         previewRow("Size", value: book.displaySize, systemImage: "internaldrive")
                         previewRow("Download", value: viewModel.downloadName(for: book), systemImage: "arrow.down.circle")
                         previewRow("Conversion", value: viewModel.conversionStatus(for: book), systemImage: "arrow.triangle.2.circlepath")
+                        previewRow("Sharing", value: viewModel.isBookShared(book) ? "On" : "Off", systemImage: viewModel.isBookShared(book) ? "checkmark.circle" : "circle")
                     }
 
                     Button {
@@ -457,7 +468,7 @@ struct ContentView: View {
                     Button(role: .destructive) {
                         viewModel.removeSelectedBooks()
                     } label: {
-                        Label("Remove from Sharing", systemImage: "trash")
+                        Label("Remove from List", systemImage: "trash")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)

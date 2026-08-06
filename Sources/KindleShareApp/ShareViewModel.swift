@@ -37,6 +37,7 @@ final class ShareViewModel: ObservableObject {
     @Published private(set) var selectedFolder: URL?
     @Published private(set) var selectedFiles: [URL] = []
     @Published private(set) var removedFolderBookURLs = Set<URL>()
+    @Published private(set) var unsharedBookURLs = Set<URL>()
     @Published private(set) var books: [BookFile] = []
     @Published private(set) var isSharing = false
     @Published private(set) var localAddress = LocalIPAddressProvider.localIPv4Address()
@@ -81,6 +82,14 @@ final class ShareViewModel: ObservableObject {
         books.filter { needsConversion($0) }
     }
 
+    var sharedBooks: [BookFile] {
+        books.filter { isBookShared($0) }
+    }
+
+    var sharedBooksCount: Int {
+        sharedBooks.count
+    }
+
     var convertedBooksCount: Int {
         books.filter { isConverted($0) }.count
     }
@@ -91,7 +100,7 @@ final class ShareViewModel: ObservableObject {
 
     var statusSubtitle: String {
         if isSharing {
-            "Kindle can download \(books.count) book\(books.count == 1 ? "" : "s")."
+            "Kindle can download \(sharedBooksCount) book\(sharedBooksCount == 1 ? "" : "s")."
         } else if !hasSource {
             "Choose a folder or add books to begin."
         } else {
@@ -134,6 +143,7 @@ final class ShareViewModel: ObservableObject {
         stopSharing()
         selectedFolder = folder
         removedFolderBookURLs = []
+        unsharedBookURLs = []
         refreshBooks()
     }
 
@@ -141,6 +151,7 @@ final class ShareViewModel: ObservableObject {
         stopSharing()
         let uniqueNewURLs = uniqueURLs(urls)
         removedFolderBookURLs.subtract(uniqueNewURLs.map(\.standardizedFileURL))
+        unsharedBookURLs.subtract(uniqueNewURLs.map(\.standardizedFileURL))
         selectedFiles = uniqueURLs(selectedFiles + uniqueNewURLs)
         refreshBooks()
     }
@@ -149,6 +160,7 @@ final class ShareViewModel: ObservableObject {
         guard hasSource else {
             books = []
             selectedBookIDs = []
+            unsharedBookURLs = []
             return
         }
 
@@ -157,6 +169,8 @@ final class ShareViewModel: ObservableObject {
             let fileBooks = try scanner.scan(files: selectedFiles)
             books = uniqueBooks(folderBooks + fileBooks)
                 .filter { !removedFolderBookURLs.contains($0.url.standardizedFileURL) }
+            let currentBookURLs = Set(books.map { $0.url.standardizedFileURL })
+            unsharedBookURLs = unsharedBookURLs.intersection(currentBookURLs)
             if let selectedBookID = selectedBookIDs.first, !books.contains(where: { $0.id == selectedBookID }) {
                 selectedBookIDs = books.first.map { [$0.id] } ?? []
             } else if selectedBookIDs.isEmpty {
@@ -195,6 +209,7 @@ final class ShareViewModel: ObservableObject {
 
         selectedFiles.removeAll { selectedURLs.contains($0.standardizedFileURL) }
         removedFolderBookURLs.formUnion(selectedURLs)
+        unsharedBookURLs.subtract(selectedURLs)
         selectedBookIDs = []
         conversionMessage = selectedBooks.count == 1 ? "Removed 1 book from sharing." : "Removed \(selectedBooks.count) books from sharing."
         refreshBooks()
@@ -231,6 +246,7 @@ final class ShareViewModel: ObservableObject {
                     try await Task.detached {
                         try EPUBConverter().convert(epubURL: book.url, outputURL: outputURL)
                     }.value
+                    includeConvertedOutput(outputURL, convertedFrom: book)
                 } catch {
                     errorMessage = "Could not convert \(book.name). \(error.localizedDescription)"
                     conversionMessage = "Conversion stopped."
@@ -250,15 +266,16 @@ final class ShareViewModel: ObservableObject {
             return
         }
 
-        guard !books.isEmpty else {
-            errorMessage = "Add at least one supported book before starting sharing."
+        let booksToShare = sharedBooks
+        guard !booksToShare.isEmpty else {
+            errorMessage = "Select at least one book to share before starting."
             return
         }
 
         refreshBooks()
 
         do {
-            try server.start(books: books)
+            try server.start(books: sharedBooks)
             isSharing = true
             errorMessage = localAddress == nil ? "Sharing is on, but no Wi-Fi IP was found." : nil
         } catch {
@@ -316,6 +333,22 @@ final class ShareViewModel: ObservableObject {
         return isConverted(book) ? "Converted to AZW3" : "Needs conversion"
     }
 
+    func isBookShared(_ book: BookFile) -> Bool {
+        !unsharedBookURLs.contains(book.url.standardizedFileURL)
+    }
+
+    func setBook(_ book: BookFile, shared: Bool) {
+        stopSharing()
+
+        var nextUnsharedBookURLs = unsharedBookURLs
+        if shared {
+            nextUnsharedBookURLs.remove(book.url.standardizedFileURL)
+        } else {
+            nextUnsharedBookURLs.insert(book.url.standardizedFileURL)
+        }
+        unsharedBookURLs = nextUnsharedBookURLs
+    }
+
     func isLoading(_ action: Action) -> Bool {
         activeAction == action
     }
@@ -341,6 +374,17 @@ final class ShareViewModel: ObservableObject {
             guard !seen.contains(standardizedURL) else { return false }
             seen.insert(standardizedURL)
             return true
+        }
+    }
+
+    private func includeConvertedOutput(_ outputURL: URL, convertedFrom book: BookFile) {
+        let outputStandardizedURL = outputURL.standardizedFileURL
+        removedFolderBookURLs.remove(outputStandardizedURL)
+        unsharedBookURLs.remove(outputStandardizedURL)
+
+        let originalWasAddedFile = selectedFiles.contains { $0.standardizedFileURL == book.url.standardizedFileURL }
+        if selectedFolder == nil || originalWasAddedFile {
+            selectedFiles = uniqueURLs(selectedFiles + [outputURL])
         }
     }
 
